@@ -1,13 +1,38 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Modal, FlatList, TextInput, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, Modal, FlatList, TextInput, ActivityIndicator, Platform, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ArrowLeft, Plus, X, Users, Check } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
-import { ArrowLeft, Plus, User as UserIcon, Send, X } from 'lucide-react-native';
-import * as SMS from 'expo-sms';
-import Animated, { FadeInDown, SlideInDown, SlideOutDown } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BillItem, User } from '../types';
 import { getContacts, getContactFrequencies, incrementContactFrequency } from '../services/contactsService';
+
+import { NavigationContext, NavigationRouteContext } from '@react-navigation/native';
 import ReceiptViewer from '../components/ReceiptViewer';
+
+// Font Constants
+const NEWSREADER_BOLD = 'Newsreader_700Bold';
+const NEWSREADER_ITALIC_BOLD = 'Newsreader_700Bold_Italic';
+const NEWSREADER_REGULAR = 'Newsreader_400Regular';
+
+// High-end distinct palette helper
+const getUserColor = (userId: string) => {
+    if (userId === 'me') return { bg: '#ffffff', border: '#85341f' };
+    const colors = [
+        { bg: '#e1f5ed', border: '#acdcc8' }, // Mint
+        { bg: '#eef2e1', border: '#cdd6b2' }, // Olive-ish
+        { bg: '#f5f0e1', border: '#dac99f' }, // Clay/Sand
+        { bg: '#faecec', border: '#e8afaf' }, // Soft Rose
+        { bg: '#e1f0f5', border: '#b2d5e0' }, // Sky Blue
+        { bg: '#f0e1fa', border: '#ccaae8' }, // Lavender
+        { bg: '#f5e9e1', border: '#e6c2ad' }, // Peachy
+        { bg: '#e1ebe1', border: '#bccbbc' }, // Sage
+    ];
+    const index = (userId.charCodeAt(0) + userId.length) % colors.length;
+    return colors[index];
+};
 
 export default function SplittingScreen({ navigation, route }: any) {
     const { items: initialItems, imageUri } = route.params;
@@ -15,316 +40,589 @@ export default function SplittingScreen({ navigation, route }: any) {
 
     const [items, setItems] = useState<BillItem[]>(initialItems.filter((i: BillItem) => !i.isGroup));
     const [users, setUsers] = useState<User[]>([{ id: 'me', name: 'Me', initials: 'ME' }]);
-    const [selectedItem, setSelectedItem] = useState<BillItem | null>(null);
+    const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+    const [displayItemId, setDisplayItemId] = useState<string | null>(null);
     const [isContactModalVisible, setContactModalVisible] = useState(false);
     const [contacts, setContacts] = useState<User[]>([]);
     const [loadingContacts, setLoadingContacts] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [userMultipliers, setUserMultipliers] = useState<Record<string, number>>({});
 
-    // Calculate totals
+    useEffect(() => {
+        if (selectedItemId) setDisplayItemId(selectedItemId);
+        else setDisplayItemId(null);
+    }, [selectedItemId]);
+
+    const selectedItemIdRef = useRef(selectedItemId);
+    const usersRef = useRef(users);
+    const userMultipliersRef = useRef(userMultipliers);
+    useEffect(() => { selectedItemIdRef.current = selectedItemId; }, [selectedItemId]);
+    useEffect(() => { usersRef.current = users; }, [users]);
+    useEffect(() => { userMultipliersRef.current = userMultipliers; }, [userMultipliers]);
+
+    useEffect(() => {
+        const loadSession = async () => {
+            try {
+                const sessionStr = await AsyncStorage.getItem('current_split_session');
+                if (sessionStr) {
+                    const session = JSON.parse(sessionStr);
+                    if (session.imageUri === imageUri) {
+                        const mergedItems = initialItems.filter((i: BillItem) => !i.isGroup).map((newItem: BillItem) => {
+                            const savedItem = session.items.find((i: BillItem) => i.id === newItem.id);
+                            return savedItem ? { ...newItem, assignedTo: savedItem.assignedTo } : newItem;
+                        });
+                        setItems(mergedItems);
+                        if (session.users) setUsers(session.users);
+                        if (session.userMultipliers) setUserMultipliers(session.userMultipliers);
+                        return;
+                    }
+                }
+            } catch (e) {
+                console.error('[Lifecycle] Error loading session:', e);
+            }
+            setItems(initialItems.filter((i: BillItem) => !i.isGroup));
+            setUsers([{ id: 'me', name: 'Me', initials: 'ME' }]);
+            setUserMultipliers({});
+        };
+        loadSession();
+    }, [initialItems, imageUri]);
+
+    useEffect(() => {
+        if (items.length > 0) {
+            AsyncStorage.setItem('current_split_session', JSON.stringify({ imageUri, items, users, userMultipliers })).catch(() => {});
+        }
+    }, [items, users, userMultipliers, imageUri]);
+
     const getUserTotal = (userId: string) => {
         return items.reduce((total, item) => {
             const userShares = item.assignedTo.filter(id => id === userId).length;
-            if (userShares > 0) {
-                return total + ((item.price / item.assignedTo.length) * userShares);
-            }
+            if (userShares > 0) return total + ((item.price / item.assignedTo.length) * userShares);
             return total;
         }, 0);
     };
 
-    const addAssignment = (userId: string) => {
-        if (!selectedItem) return;
-        const updatedItems = items.map(item => {
-            if (item.id === selectedItem.id) {
-                return { ...item, assignedTo: [...item.assignedTo, userId] };
-            }
-            return item;
+    const getUserMaxShares = (userId: string) => {
+        let max = userMultipliers[userId] || 1;
+        items.forEach(item => {
+            const shares = item.assignedTo.filter(id => id === userId).length;
+            if (shares > max) max = shares;
         });
-        setItems(updatedItems);
-        setSelectedItem(updatedItems.find(i => i.id === selectedItem.id) || null);
+        return max;
     };
 
-    const removeAssignment = (userId: string) => {
-        if (!selectedItem) return;
-        const updatedItems = items.map(item => {
-            if (item.id === selectedItem.id) {
-                // Remove all instances of userId
-                return { ...item, assignedTo: item.assignedTo.filter(id => id !== userId) };
-            }
-            return item;
-        });
-        setItems(updatedItems);
-        setSelectedItem(updatedItems.find(i => i.id === selectedItem.id) || null);
-    };
-    
-    // Kept for backward compatibility if needed, but we use add/remove now
-    const toggleAssignment = (userId: string) => {
-        const userShares = selectedItem?.assignedTo.filter(id => id === userId).length || 0;
-        if (userShares > 0) {
-            removeAssignment(userId);
-        } else {
-            addAssignment(userId);
-        }
-    };
+    const addOneAssignment = useCallback((userId: string) => {
+        const targetId = selectedItemIdRef.current;
+        if (!targetId) return;
+        setItems(prevItems => prevItems.map(item =>
+            item.id === targetId ? { ...item, assignedTo: [...item.assignedTo, userId] } : item
+        ));
+    }, []);
+
+    const removeOneAssignment = useCallback((userId: string) => {
+        const targetId = selectedItemIdRef.current;
+        if (!targetId) return;
+        setItems(prevItems => prevItems.map(item => {
+            if (item.id !== targetId) return item;
+            const index = item.assignedTo.lastIndexOf(userId);
+            if (index === -1) return item;
+            const newAssigned = [...item.assignedTo];
+            newAssigned.splice(index, 1);
+            return { ...item, assignedTo: newAssigned };
+        }));
+    }, []);
+
+    const assignAll = useCallback(() => {
+        const targetId = selectedItemIdRef.current;
+        const currentUsers = usersRef.current;
+        const currentMultipliers = userMultipliersRef.current;
+        if (!targetId) return;
+        setItems(prevItems => prevItems.map(item => {
+            if (item.id !== targetId) return item;
+            const allAssigned: string[] = [];
+            currentUsers.forEach(u => {
+                const mult = currentMultipliers[u.id] || 1;
+                allAssigned.push(...Array(mult).fill(u.id));
+            });
+            return { ...item, assignedTo: allAssigned };
+        }));
+    }, []);
+
+    const removeAll = useCallback(() => {
+        const targetId = selectedItemIdRef.current;
+        if (!targetId) return;
+        setItems(prevItems => prevItems.map(item =>
+            item.id === targetId ? { ...item, assignedTo: [] } : item
+        ));
+    }, []);
 
     const fetchContacts = async () => {
         setLoadingContacts(true);
-        const [fetchedContacts, freqs] = await Promise.all([
-            getContacts(),
-            getContactFrequencies()
-        ]);
-        
-        fetchedContacts.sort((a, b) => {
-            const freqA = freqs[a.id] || 0;
-            const freqB = freqs[b.id] || 0;
-            if (freqA !== freqB) {
-                return freqB - freqA; // High to low
-            }
-            return a.name.localeCompare(b.name);
-        });
-
+        const fetchedContacts = await getContacts();
         setContacts(fetchedContacts);
         setLoadingContacts(false);
     };
 
-    const addUser = (user: User) => {
-        if (!users.find(u => u.id === user.id)) {
+    const toggleUser = (user: User) => {
+        if (users.find(u => u.id === user.id)) {
+            if (user.id !== 'me') {
+                setUsers(users.filter(u => u.id !== user.id));
+                setItems(prevItems => prevItems.map(item => ({ ...item, assignedTo: item.assignedTo.filter(id => id !== user.id) })));
+            }
+        } else {
             setUsers([...users, user]);
+            incrementContactFrequency(user.id);
         }
-        incrementContactFrequency(user.id);
-        setContactModalVisible(false);
     };
 
-    const sendRequest = async (user: User) => {
-        const total = getUserTotal(user.id);
-        if (total <= 0 || !user.phoneNumber) return;
+    const incrementGlobalShare = (userId: string) => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        setUserMultipliers(prev => ({ ...prev, [userId]: (prev[userId] || 1) + 1 }));
+        setItems(prevItems => prevItems.map(item => item.assignedTo.includes(userId) ? { ...item, assignedTo: [...item.assignedTo, userId] } : item ));
+    };
 
-        const isAvailable = await SMS.isAvailableAsync();
-        if (isAvailable) {
-            await SMS.sendSMSAsync(
-                [user.phoneNumber],
-                `Hey ${user.name}, your share of the bill is $${total.toFixed(2)}.`
-            );
-        } else {
-            alert(`SMS is not available. Owed: $${total.toFixed(2)}`);
-        }
+    const decrementGlobalShare = (userId: string) => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        setUserMultipliers(prev => {
+            const current = prev[userId] || 1;
+            if (current <= 1) return prev;
+            return { ...prev, [userId]: current - 1 };
+        });
+        setItems(prevItems => prevItems.map(item => {
+            const shares = item.assignedTo.filter((id: string) => id === userId).length;
+            if (shares > 1) {
+                const index = item.assignedTo.indexOf(userId);
+                const newAssigned = [...item.assignedTo];
+                newAssigned.splice(index, 1);
+                return { ...item, assignedTo: newAssigned };
+            }
+            return item;
+        }));
     };
 
     return (
-        <View className="flex-1 bg-black">
-            <BlurView intensity={80} tint="dark" className="flex-1">
-                <View style={{ paddingTop: insets.top, paddingBottom: insets.bottom }} className="flex-1">
-                    {/* Header */}
-                    <View className="flex-row items-center justify-between px-4 py-4 border-b border-white/10 z-10">
-                        <TouchableOpacity onPress={() => navigation.goBack()} className="p-2 bg-white/10 rounded-full">
-                            <ArrowLeft size={24} color="white" />
-                        </TouchableOpacity>
-                        <Text className="text-white text-xl font-bold">Split Bill</Text>
-                        <TouchableOpacity onPress={() => {
-                            fetchContacts();
-                            setContactModalVisible(true);
-                        }} className="p-2 bg-blue-600 rounded-full">
-                            <Plus size={24} color="white" />
-                        </TouchableOpacity>
-                    </View>
-                    {/* Receipt Viewer */}
-                    <ReceiptViewer imageUri={imageUri} topOffset={70} />
+        <NavigationContext.Provider value={navigation}>
+            <NavigationRouteContext.Provider value={route}>
+                <View style={{ flex: 1, backgroundColor: '#fcf9f4' }}>
+                    <View style={{ flex: 1, paddingTop: insets.top }}>
+                        
+                        {/* Header */}
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingVertical: 12 }}>
+                            <Pressable onPress={() => navigation.goBack()} style={({ pressed }) => [{ width: 44, opacity: pressed ? 0.5 : 1 }]}>
+                                <ArrowLeft size={22} color="#85341f" />
+                            </Pressable>
+                            <Text style={{ fontFamily: NEWSREADER_ITALIC_BOLD, fontSize: 22, color: '#85341f', fontStyle: 'italic' }}>Split the Tab</Text>
+                            <View style={{ width: 44, alignItems: 'flex-end' }}>
+                                <ReceiptViewer imageUri={imageUri} />
+                            </View>
+                        </View>
 
-                    {/* Users ScrollView (Horizontal) */}
-                    <View className="py-4 border-b border-white/10">
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="pl-4">
-                            {users.map((user, index) => (
-                                <Animated.View
-                                    entering={FadeInDown.delay(index * 100)}
-                                    key={user.id}
-                                    style={{ alignItems: 'center', marginRight: 24 }}
-                                >
-                                    <View className="w-16 h-16 rounded-full bg-gray-700 justify-center items-center mb-2 border-2 border-white/20">
-                                        <Text className="text-white font-bold">{user.initials}</Text>
-                                    </View>
-                                    <Text className="text-white text-xs">{user.name}</Text>
-                                    <Text className="text-green-400 text-xs font-bold">${getUserTotal(user.id).toFixed(2)}</Text>
-                                </Animated.View>
-                            ))}
-                        </ScrollView>
-                    </View>
+                        {/* Instructional Sub-header */}
+                        <View style={{ marginTop: 24, marginBottom: 12, alignItems: 'center', paddingHorizontal: 24 }}>
+                            <Text style={{ fontSize: 9, color: '#aba9a2', letterSpacing: 1.2, fontWeight: '600', textAlign: 'center' }}>
+                                TAP AVATAR TO COVER GUESTS (+1). HOLD TO REMOVE (−1).
+                            </Text>
+                        </View>
 
-                    {/* Items List */}
-                    <ScrollView className="flex-1 px-4 mt-4">
-                        {items.map((item, index) => (
-                            <Animated.View entering={FadeInDown.delay(index * 50)} key={item.id} style={{ marginBottom: 12 }}>
-                                <TouchableOpacity
-                                    onPress={() => setSelectedItem(item)}
-                                    className={`flex-row justify-between items-center p-4 rounded-2xl ${selectedItem?.id === item.id ? 'bg-blue-900/50 border border-blue-500' : 'bg-white/10 border border-white/5'}`}
+                        {/* Avatar List Row */}
+                        <View style={{ marginBottom: 12 }}>
+                            <ScrollView 
+                                horizontal 
+                                showsHorizontalScrollIndicator={false} 
+                                contentContainerStyle={{ 
+                                    paddingHorizontal: 24, 
+                                    paddingVertical: 10,
+                                    alignItems: 'center',
+                                    gap: 16
+                                }}
+                            >
+                                {users.map((user, index) => {
+                                    const maxShares = getUserMaxShares(user.id);
+                                    const userColor = getUserColor(user.id);
+
+                                    return (
+                                        <Pressable 
+                                            key={user.id} 
+                                            onPress={() => incrementGlobalShare(user.id)} 
+                                            onLongPress={() => decrementGlobalShare(user.id)} 
+                                            style={({ pressed }) => [{ 
+                                                alignItems: 'center', 
+                                                transform: [{ scale: pressed ? 0.95 : 1 }]
+                                            }]}
+                                        >
+                                            <View style={{ 
+                                                width: 52, 
+                                                height: 52, 
+                                                borderRadius: 26, 
+                                                alignItems: 'center', 
+                                                justifyContent: 'center', 
+                                                marginBottom: 8, 
+                                                backgroundColor: userColor.bg, 
+                                                borderWidth: 1.5, 
+                                                borderColor: userColor.border,
+                                                shadowColor: '#000', 
+                                                shadowOffset: { width: 0, height: 2 }, 
+                                                shadowOpacity: 0.04, 
+                                                shadowRadius: 3
+                                            }}>
+                                                <Text style={{ fontFamily: NEWSREADER_BOLD, fontSize: 18, color: '#85341f' }}>{user.initials}</Text>
+                                                {maxShares > 1 && (
+                                                    <View style={{ position: 'absolute', top: -2, left: -2, backgroundColor: '#1c1c19', borderRadius: 10, minWidth: 20, height: 20, justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: '#fcf9f4' }}>
+                                                        <Text style={{ color: 'white', fontSize: 9, fontWeight: 'bold' }}>x{maxShares}</Text>
+                                                    </View>
+                                                )}
+                                            </View>
+                                            <View className="flex-row items-baseline">
+                                                <Text className="text-primary/60 font-body font-bold text-base mr-0.5">$</Text>
+                                                <Text className="text-primary font-body font-bold text-lg">
+                                                    {getUserTotal(user.id).toFixed(2)}
+                                                </Text>
+                                            </View>
+                                        </Pressable>
+                                    );
+                                })}
+                                <Pressable 
+                                    onPress={() => { fetchContacts(); setContactModalVisible(true); }} 
+                                    style={({ pressed }) => [{ 
+                                        alignItems: 'center', 
+                                        transform: [{ scale: pressed ? 0.92 : 1 }],
+                                        marginLeft: 4
+                                    }]}
                                 >
-                                    <View className="flex-1">
-                                        <Text className="text-white text-lg font-medium">{item.name}</Text>
-                                        <View className="flex-row mt-2 flex-wrap">
-                                            {item.assignedTo.length === 0 && <Text className="text-gray-400 text-xs italic">Unassigned</Text>}
-                                            {
-                                                // Group assigned user IDs and count shares
-                                                Object.entries(item.assignedTo.reduce((acc: any, id) => {
-                                                    acc[id] = (acc[id] || 0) + 1;
-                                                    return acc;
-                                                }, {})).map(([userId, count]) => {
-                                                    const u = users.find((usr: User) => usr.id === userId);
-                                                    return (
-                                                        <View key={userId} className="bg-gray-700 px-2 py-1 rounded-md mr-1 mb-1 flex-row items-center">
-                                                            <Text className="text-xs text-white">{u?.initials}</Text>
-                                                            {(count as number) > 1 && <Text className="text-xs text-blue-300 ml-1 font-bold">x{count as number}</Text>}
-                                                        </View>
-                                                    );
-                                                })
-                                            }
+                                    <View style={{ alignItems: 'center' }}>
+                                        <View style={{ 
+                                            width: 52, 
+                                            height: 52, 
+                                            borderRadius: 26, 
+                                            backgroundColor: '#ffffff', 
+                                            borderColor: '#dbc1ba', 
+                                            borderWidth: 1.2, 
+                                            alignItems: 'center', 
+                                            justifyContent: 'center', 
+                                            marginBottom: 8 
+                                        }}>
+                                            <Plus size={24} color="#85341f" />
+                                        </View>
+                                        <View style={{ height: 26, justifyContent: 'center' }}>
+                                            <Text className="font-bold text-lg text-primary uppercase text-center">ADD</Text>
                                         </View>
                                     </View>
-                                    <Text className="text-white text-lg font-bold">${item.price.toFixed(2)}</Text>
-                                </TouchableOpacity>
-                            </Animated.View>
-                        ))}
-                    </ScrollView>
+                                </Pressable>
+                            </ScrollView>
+                        </View>
 
-                    {/* Bottom Assignment Sheet (visible when item selected) */}
-                    {selectedItem && (
-                        <Animated.View
-                            entering={SlideInDown}
-                            exiting={SlideOutDown}
-                            style={{
-                                position: 'absolute',
-                                bottom: insets.bottom + 80, // Position above the button
-                                width: '100%',
-                                zIndex: 50, // Ensure it sits above
-                            }}
-                        >
-                            <View className="bg-gray-900/95 border border-white/10 p-4 rounded-3xl mx-4 self-center shadow-lg">
-                                <View className="flex-row justify-between items-center mb-2">
-                                    <Text className="text-white text-xl font-bold">Assign "{selectedItem.name}"</Text>
-                                    <TouchableOpacity onPress={() => setSelectedItem(null)}>
-                                        <X size={24} color="gray" />
-                                    </TouchableOpacity>
-                                </View>
-                                <Text className="text-gray-400 text-xs mb-4 text-center">Tap to add share. Hold to remove.</Text>
-                                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                                    {users.map(user => {
-                                        const userShares = selectedItem.assignedTo.filter(id => id === user.id).length;
-                                        const isSelected = userShares > 0;
-                                        return (
-                                            <TouchableOpacity
-                                                key={user.id}
-                                                onPress={() => addAssignment(user.id)}
-                                                onLongPress={() => removeAssignment(user.id)}
-                                                delayLongPress={300}
-                                                className={`mr-4 items-center p-2 rounded-xl border ${isSelected ? 'bg-blue-600 border-blue-400' : 'bg-transparent border-gray-600'}`}
+                        {/* Item List */}
+                        <View style={{ flex: 1 }}>
+                            <FlatList
+                                data={items}
+                                keyExtractor={(item) => item.id}
+                                showsVerticalScrollIndicator={false}
+                                contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 160, paddingTop: 6 }}
+                                ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+                                renderItem={({ item }) => {
+                                    const isSplit = item.assignedTo.length > 0;
+                                    const isSelected = selectedItemId === item.id;
+
+                                    return (
+                                        <View style={{ 
+                                            backgroundColor: '#ffffff', 
+                                            borderRadius: 24,
+                                            borderWidth: 1.2, 
+                                            borderColor: 'rgba(219, 193, 186, 0.45)',
+                                            shadowColor: '#1c1c19', 
+                                            shadowOffset: { width: 0, height: 4 }, 
+                                            shadowOpacity: 0.04, 
+                                            shadowRadius: 10,
+                                            marginHorizontal: 2, // Slight buffer
+                                            elevation: 2,
+                                            paddingHorizontal: 16,
+                                            paddingVertical: 14
+                                        }}>
+                                            <Pressable 
+                                                onPress={() => {
+                                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                                    setSelectedItemId(item.id);
+                                                }} 
+                                                style={({ pressed }) => ({ 
+                                                    opacity: pressed ? 0.7 : 1
+                                                })}
                                             >
-                                                <View className="relative mb-1">
-                                                    <View className="w-12 h-12 rounded-full bg-gray-700 justify-center items-center">
-                                                        <Text className="text-white">{user.initials}</Text>
+                                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <View style={{ flex: 1, paddingRight: 20 }}>
+                                                        <Text style={{ fontFamily: NEWSREADER_BOLD, fontSize: 18, color: '#1c1c19', letterSpacing: -0.2, lineHeight: 22 }}>{item.name}</Text>
+                                                        <Text style={{ fontFamily: NEWSREADER_REGULAR, fontStyle: 'italic', fontSize: 13, color: '#85341f', opacity: 0.5, marginTop: 4 }}>
+                                                            {isSplit ? `Split with ${item.assignedTo.length} ${item.assignedTo.length === 1 ? 'person' : 'people'}` : 'Unassigned'}
+                                                        </Text>
                                                     </View>
-                                                    {userShares > 1 && (
-                                                        <View className="absolute -top-1 -right-1 bg-red-500 rounded-full w-6 h-6 justify-center items-center shadow border border-red-800" style={{ elevation: 5, zIndex: 10 }}>
-                                                            <Text className="text-white text-xs font-bold">{userShares}</Text>
-                                                        </View>
-                                                    )}
+                                                    <View className="flex-row items-baseline">
+                                                        <Text className="text-primary/60 font-body font-bold text-xl mr-0.5">$</Text>
+                                                        <Text className="text-on-surface font-body font-bold text-xl">
+                                                            {item.price.toFixed(2)}
+                                                        </Text>
+                                                    </View>
                                                 </View>
-                                                <Text className="text-white text-xs">{user.name}</Text>
-                                            </TouchableOpacity>
-                                        );
-                                    })}
-                                </ScrollView>
+                                                
+                                                {isSplit && (
+                                                    <View style={{ marginTop: 12, flexDirection: 'row', flexWrap: 'wrap', borderTopWidth: 1, borderTopColor: 'rgba(219, 193, 186, 0.15)', paddingTop: 10 }}>
+                                                        {[...new Set(item.assignedTo)].map((userId) => {
+                                                            const u = users.find((usr: User) => usr.id === userId);
+                                                            const count = item.assignedTo.filter(id => id === userId).length;
+                                                            const userColor = getUserColor(userId);
+                                                            
+                                                            return (
+                                                                <View key={userId} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, marginRight: 12 }}>
+                                                                    <View style={{ 
+                                                                        width: 32, 
+                                                                        height: 32, 
+                                                                        borderRadius: 16, 
+                                                                        backgroundColor: userColor.bg, 
+                                                                        borderWidth: 1, 
+                                                                        borderColor: userColor.border, 
+                                                                        alignItems: 'center', 
+                                                                        justifyContent: 'center', 
+                                                                        shadowColor: '#000', 
+                                                                        shadowOffset: { width: 0, height: 2 }, 
+                                                                        shadowOpacity: 0.05, 
+                                                                        shadowRadius: 3 
+                                                                    }}>
+                                                                        <Text style={{ fontFamily: NEWSREADER_BOLD, fontSize: 11, color: '#85341f', transform: [{ translateY: 1.0 }] }}>{u?.initials}</Text>
+                                                                        {count > 1 && (
+                                                                            <View style={{ position: 'absolute', top: -4, right: -4, backgroundColor: '#1c1c19', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#f6f3ee' }}>
+                                                                                <Text style={{ color: 'white', fontSize: 7, fontWeight: 'bold' }}>{count}</Text>
+                                                                            </View>
+                                                                        )}
+                                                                    </View>
+                                                                </View>
+                                                            );
+                                                        })}
+                                                    </View>
+                                                )}
+                                            </Pressable>
+                                        </View>
+                                    );
+                                }}
+                            />
+                        </View>
+                    </View>
+
+                    {/* Bottom Action Bar */}
+                    <View style={{ 
+                        paddingBottom: Math.max(insets.bottom, 20), 
+                        paddingTop: 20, 
+                        paddingHorizontal: 24, 
+                        backgroundColor: '#fcf9f4', 
+                        position: 'absolute', 
+                        bottom: 0, 
+                        width: '100%', 
+                        borderTopWidth: 1, 
+                        borderTopColor: 'rgba(219, 193, 186, 0.2)',
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: -4 },
+                        shadowOpacity: 0.02,
+                        shadowRadius: 10
+                    }}>
+                        <Pressable 
+                            onPress={() => {
+                                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                                navigation.navigate('Result', { items, users, tax: route.params.tax, serviceCharge: route.params.serviceCharge, tip: route.params.tip, imageUri });
+                            }} 
+                            style={({ pressed }) => ({
+                                transform: [{ scale: pressed ? 0.98 : 1 }],
+                                opacity: pressed ? 0.9 : 1
+                            })}
+                        >
+                            <View 
+                                style={{ 
+                                    backgroundColor: '#85341f',
+                                    paddingVertical: 18, 
+                                    borderRadius: 30, 
+                                    alignItems: 'center', 
+                                    shadowColor: '#85341f', 
+                                    shadowOffset: { width: 0, height: 6 }, 
+                                    shadowOpacity: 0.25, 
+                                    shadowRadius: 12,
+                                    flexDirection: 'row',
+                                    justifyContent: 'center'
+                                }}
+                            >
+                                <Text style={{ color: 'white', fontSize: 18, fontWeight: '800', fontFamily: NEWSREADER_BOLD, letterSpacing: 0.5 }}>Review & Send</Text>
                             </View>
-                        </Animated.View>
+                        </Pressable>
+                    </View>
+
+                    {/* Assignment Sheet UI - Compact Refined Design */}
+                    {displayItemId && (
+                        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100 }}>
+                            <Pressable 
+                                style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} 
+                                onPress={() => setSelectedItemId(null)}
+                            >
+                                <View style={{ flex: 1, backgroundColor: 'rgba(28, 28, 25, 0.4)' }} />
+                            </Pressable>
+                            
+                            <View style={{ 
+                                position: 'absolute', 
+                                bottom: insets.bottom + 120, 
+                                left: 16, 
+                                right: 16, 
+                                backgroundColor: '#fcf9f4', 
+                                borderRadius: 36, 
+                                paddingHorizontal: 20, 
+                                paddingTop: 24,
+                                paddingBottom: 32,
+                                shadowColor: '#000', 
+                                shadowOffset: { width: 0, height: 12 }, 
+                                shadowOpacity: 0.15, 
+                                shadowRadius: 24, 
+                                borderWidth: 1, 
+                                borderColor: 'rgba(219, 193, 186, 0.5)',
+                            }}>
+                                {(() => {
+                                    const activeItem = items.find(i => i.id === displayItemId);
+                                    if (!activeItem) return null;
+                                    return (
+                                        <>
+                                            <View style={{ width: '100%', alignItems: 'center', marginBottom: 30, position: 'relative' }}>
+                                                <Text style={{ fontFamily: NEWSREADER_BOLD, fontSize: 22, color: '#85341f', textAlign: 'center' }}>Assign "{activeItem.name}"</Text>
+                                                <Text style={{ fontSize: 10, color: '#aba9a2', marginTop: 6, fontWeight: '500' }}>Tap to add. Hold to remove.</Text>
+                                                
+                                                <TouchableOpacity 
+                                                    onPress={() => setSelectedItemId(null)} 
+                                                    style={{ 
+                                                        position: 'absolute', 
+                                                        top: -6, 
+                                                        right: 0, 
+                                                        width: 44, 
+                                                        height: 44, 
+                                                        alignItems: 'flex-end',
+                                                        justifyContent: 'flex-start'
+                                                    }}
+                                                >
+                                                    <X size={24} color="#1c1c19" strokeWidth={1.5} />
+                                                </TouchableOpacity>
+                                            </View>
+                                            
+                                            <View style={{ width: '100%' }}>
+                                                <ScrollView 
+                                                    horizontal 
+                                                    showsHorizontalScrollIndicator={false} 
+                                                    contentContainerStyle={{ 
+                                                        gap: 12, 
+                                                        paddingHorizontal: 4,
+                                                        paddingBottom: 4,
+                                                        alignItems: 'flex-start'
+                                                    }}
+                                                >
+                                                    <View style={{ alignItems: 'center', width: 62 }}>
+                                                        <Pressable 
+                                                            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); assignAll(); }} 
+                                                            onLongPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); removeAll(); }} 
+                                                            style={({ pressed }) => [{ transform: [{ scale: pressed ? 0.94 : 1 }] }]}
+                                                        >
+                                                            <View style={{ 
+                                                                width: 50, 
+                                                                height: 50, 
+                                                                borderRadius: 25, 
+                                                                backgroundColor: '#ffffff', 
+                                                                borderColor: '#dbc1ba', 
+                                                                borderWidth: 1.5, 
+                                                                alignItems: 'center', 
+                                                                justifyContent: 'center', 
+                                                                shadowColor: '#000', 
+                                                                shadowOffset: { width: 0, height: 2 }, 
+                                                                shadowOpacity: 0.1, 
+                                                                shadowRadius: 4
+                                                            }}>
+                                                                <Users size={20} color="#85341f" />
+                                                            </View>
+                                                        </Pressable>
+                                                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#1c1c19', marginTop: 10, fontFamily: NEWSREADER_BOLD, textAlign: 'center', lineHeight: 13 }}>ALL</Text>
+                                                    </View>
+                                                    {users.map(user => {
+                                                        const shares = activeItem.assignedTo.filter(id => id === user.id).length;
+                                                        const userColor = getUserColor(user.id);
+
+                                                        return (
+                                                            <View key={user.id} style={{ alignItems: 'center', width: 62 }}>
+                                                                <Pressable 
+                                                                    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); addOneAssignment(user.id); }} 
+                                                                    onLongPress={() => { if (shares > 0) removeOneAssignment(user.id); }} 
+                                                                    style={({ pressed }) => [{ transform: [{ scale: pressed ? 0.94 : 1 }] }]}
+                                                                >
+                                                                    <View style={{ 
+                                                                        width: 50, 
+                                                                        height: 50, 
+                                                                        borderRadius: 25, 
+                                                                        backgroundColor: userColor.bg, 
+                                                                        borderColor: shares > 0 ? '#85341f' : userColor.border, 
+                                                                        borderWidth: shares > 0 ? 2 : 1.5, 
+                                                                        alignItems: 'center', 
+                                                                        justifyContent: 'center', 
+                                                                        shadowColor: '#000', 
+                                                                        shadowOffset: { width: 0, height: 2 }, 
+                                                                        shadowOpacity: 0.08, 
+                                                                        shadowRadius: 4
+                                                                    }}>
+                                                                        <Text style={{ fontFamily: NEWSREADER_BOLD, fontSize: 16, color: '#85341f', textAlign: 'center' }}>{user.initials}</Text>
+                                                                        {shares > 1 && (
+                                                                            <View style={{ position: 'absolute', top: -4, right: -4, backgroundColor: '#1c1c19', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#fcf9f4' }}>
+                                                                                <Text style={{ color: 'white', fontSize: 7, fontWeight: 'bold' }}>{shares}</Text>
+                                                                            </View>
+                                                                        )}
+                                                                        {shares === 1 && (
+                                                                            <View style={{ position: 'absolute', top: -2, right: -2, backgroundColor: '#85341f', borderRadius: 8, width: 16, height: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#fcf9f4' }}>
+                                                                                <Check size={8} color="white" />
+                                                                            </View>
+                                                                        )}
+                                                                    </View>
+                                                                </Pressable>
+                                                                <Text style={{ fontSize: 11, color: '#1c1c19', marginTop: 10, fontFamily: NEWSREADER_REGULAR, fontWeight: '600', textAlign: 'center', lineHeight: 13 }} numberOfLines={2}>
+                                                                    {user.name}
+                                                                </Text>
+                                                            </View>
+                                                        );
+                                                    })}
+                                                </ScrollView>
+                                            </View>
+                                        </>
+                                    );
+                                })()}
+                            </View>
+                        </View>
                     )}
 
-                    {/* Contacts Modal */}
+                    {/* Contact Modal */}
                     <Modal visible={isContactModalVisible} animationType="slide" presentationStyle="pageSheet">
-                        <View className="flex-1 bg-gray-900">
-                            <View className="p-4 flex-row justify-between items-center border-b border-white/10">
-                                <Text className="text-white text-xl font-bold">Select Contact</Text>
-                                <TouchableOpacity onPress={() => setContactModalVisible(false)}>
-                                    <Text className="text-blue-400 text-lg">Close</Text>
-                                </TouchableOpacity>
+                        <View style={{ flex: 1, backgroundColor: '#fcf9f4' }}>
+                            <View style={{ padding: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#f0ede4' }}>
+                                <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#1c1c19' }}>Select Contact</Text>
+                                <TouchableOpacity onPress={() => setContactModalVisible(false)}><Text style={{ color: '#85341f', fontSize: 18, fontWeight: '600' }}>Done</Text></TouchableOpacity>
                             </View>
-                            {loadingContacts ? (
-                                <View className="flex-1 justify-center items-center">
-                                    <ActivityIndicator size="large" color="white" />
-                                    <Text className="text-white mt-4">Loading contacts...</Text>
-                                </View>
-                            ) : (
-                                <View className="flex-1">
-                                    <View className="px-4 py-2 bg-gray-900 border-b border-white/10">
-                                        <View className="flex-row items-center bg-gray-800 rounded-xl px-3 py-2">
-                                            <TextInput
-                                                className="flex-1 text-white text-base ml-2"
-                                                placeholder="Search"
-                                                placeholderTextColor="#9ca3af"
-                                                value={searchQuery}
-                                                onChangeText={setSearchQuery}
-                                                autoCorrect={false}
-                                            />
-                                            {searchQuery.length > 0 && (
-                                                <TouchableOpacity onPress={() => setSearchQuery('')}>
-                                                    <X size={16} color="#9ca3af" />
-                                                </TouchableOpacity>
-                                            )}
-                                        </View>
-                                    </View>
-                                    <FlatList
-                                        data={contacts.filter(c =>
-                                            c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                            (c.phoneNumber && c.phoneNumber.includes(searchQuery))
-                                        )}
-                                        keyExtractor={item => item.id}
-                                        renderItem={({ item }) => (
-                                            <TouchableOpacity onPress={() => addUser(item)} className="p-4 border-b border-white/10 flex-row items-center">
-                                                <View className="w-10 h-10 rounded-full bg-gray-700 justify-center items-center mr-4">
-                                                    <Text className="text-white">{item.initials}</Text>
+                            <View style={{ padding: 16 }}>
+                                <TextInput style={{ backgroundColor: '#ffffff', borderRadius: 12, padding: 12, fontSize: 16, borderWidth: 1, borderColor: '#dbc1ba' }} placeholder="Search contacts" value={searchQuery} onChangeText={setSearchQuery} />
+                            </View>
+                            <FlatList
+                                data={contacts.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()))}
+                                keyExtractor={item => item.id}
+                                contentContainerStyle={{ paddingHorizontal: 20 }}
+                                renderItem={({ item }) => {
+                                    const isSelected = users.some(u => u.id === item.id);
+                                    return (
+                                        <TouchableOpacity onPress={() => toggleUser(item)} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#f0ede4' }}>
+                                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                                <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: isSelected ? '#85341f' : '#f0ede9', alignItems: 'center', justifyContent: 'center', marginRight: 16 }}>
+                                                    <Text style={{ color: isSelected ? 'white' : '#8c8c88', fontWeight: 'bold' }}>{item.initials}</Text>
                                                 </View>
-                                                <View>
-                                                    <Text className="text-white font-bold">{item.name}</Text>
-                                                    {item.phoneNumber && (
-                                                        <Text className="text-gray-400 text-sm">{item.phoneNumber}</Text>
-                                                    )}
-                                                </View>
-                                            </TouchableOpacity>
-                                        )}
-                                        ListEmptyComponent={
-                                            <View className="p-8 items-center">
-                                                <Text className="text-gray-500">No contacts found</Text>
+                                                <Text style={{ fontSize: 18, color: '#1c1c19' }}>{item.name}</Text>
                                             </View>
-                                        }
-                                    />
-                                </View>
-                            )}
+                                            {isSelected && <Check size={20} color="#85341f" />}
+                                        </TouchableOpacity>
+                                    );
+                                }}
+                            />
                         </View>
                     </Modal>
-
-                    {/* Bottom Action Button - Always Visible */}
-                    <Animated.View
-                        entering={FadeInDown.delay(300)}
-                        style={{
-                            paddingBottom: insets.bottom + 20,
-                            position: 'absolute',
-                            bottom: 0,
-                            width: '100%',
-                            paddingHorizontal: 24,
-                            paddingTop: 16,
-                            backgroundColor: 'rgba(0,0,0,0.6)',
-                            borderTopWidth: 1,
-                            borderColor: 'rgba(255,255,255,0.1)',
-                        }}
-                    >
-                        {/* Only show if items are processed (optional check) */}
-                        <TouchableOpacity
-                            onPress={() => navigation.navigate('Result', { items, users, tax: route.params.tax, serviceCharge: route.params.serviceCharge, tip: route.params.tip, imageUri })}
-                            className="bg-blue-600 p-4 rounded-2xl flex-row justify-center items-center shadow-lg shadow-blue-500/30"
-                        >
-                            <Text className="text-white text-lg font-bold mr-2">Review & Send</Text>
-                            <ArrowLeft size={20} color="white" style={{ transform: [{ rotate: '180deg' }] }} />
-                        </TouchableOpacity>
-                    </Animated.View>
                 </View>
-            </BlurView>
-        </View>
+            </NavigationRouteContext.Provider>
+        </NavigationContext.Provider>
     );
 }
-

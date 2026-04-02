@@ -20,31 +20,23 @@ export default function ReceiptViewer({ imageUri, topOffset = 10 }: ReceiptViewe
 
     return (
         <>
-            {/* Wrapper to position absolute top-right */}
-            <Animated.View
-                entering={FadeIn.delay(500)}
-                style={{
-                    position: 'absolute',
-                    top: insets.top + topOffset,
-                    right: 16,
-                    zIndex: 50
-                }}
-            >
+            {/* Thumbnail Wrapper */}
+            <View>
                 <TouchableOpacity
                     onPress={() => setModalVisible(true)}
-                    className="overflow-hidden rounded-xl border-2 border-white/20 shadow-lg bg-black"
-                    style={{ width: 60, height: 80 }}
+                    className="overflow-hidden rounded-md border-2 border-[#E5CDC1] bg-white shadow-sm"
+                    style={{ width: 44, height: 56 }}
                 >
                     <Image
                         source={{ uri: imageUri }}
-                        className="w-full h-full opacity-80"
+                        className="w-full h-full opacity-90"
                         resizeMode="cover"
                     />
-                    <View className="absolute inset-0 bg-black/20 justify-center items-center">
-                        <ZoomIn size={20} color="white" opacity={0.8} />
+                    <View className="absolute inset-0 bg-black/10 justify-center items-center">
+                        <ZoomIn size={18} color="white" opacity={0.9} />
                     </View>
                 </TouchableOpacity>
-            </Animated.View>
+            </View>
 
             {/* Full Screen Modal */}
             <Modal
@@ -53,22 +45,23 @@ export default function ReceiptViewer({ imageUri, topOffset = 10 }: ReceiptViewe
                 visible={modalVisible}
                 onRequestClose={() => setModalVisible(false)}
             >
-                <View className="flex-1 bg-black/90">
-                    <BlurView intensity={20} tint="dark" className="flex-1 justify-center items-center">
+                <View className="flex-1 bg-white/80">
+                    <BlurView intensity={40} tint="light" className="flex-1 justify-center items-center">
                         <TouchableOpacity
                             style={{ position: 'absolute', top: insets.top + 20, right: 20, zIndex: 100 }}
                             onPress={() => setModalVisible(false)}
-                            className="bg-gray-800/80 p-2 rounded-full"
+                            className="bg-white p-3 border border-[#E5CDC1] shadow-md rounded-full"
                         >
-                            <X size={24} color="white" />
+                            <X size={24} color="#A64932" />
                         </TouchableOpacity>
 
-                        <Image
-                            source={{ uri: imageUri }}
-                            style={{ width: width, height: height * 0.8 }}
-                            resizeMode="contain"
-                        />
-                        <Text className="text-white mt-4 font-medium opacity-70">Pinch to zoom (native)</Text>
+                        <View className="bg-white rounded-2xl shadow-xl overflow-hidden border border-[#E5CDC1]" style={{ width: width * 0.9, height: height * 0.75 }}>
+                            <Image
+                                source={{ uri: imageUri }}
+                                className="w-full h-full"
+                                resizeMode="cover"
+                            />
+                        </View>
                     </BlurView>
                 </View>
             </Modal>

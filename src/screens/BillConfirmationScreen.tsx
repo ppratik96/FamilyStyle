@@ -1,12 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Image, ScrollView, TouchableOpacity, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, Image, ScrollView, TouchableOpacity, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform, Alert, Pressable } from 'react-native';
+
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BlurView } from 'expo-blur';
-import { ArrowLeft, Check, Edit2 } from 'lucide-react-native';
+import { ArrowLeft, Check, Edit2, X } from 'lucide-react-native';
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
+import { StatusBar } from 'expo-status-bar';
 import { mockProcessBill } from '../services/ocrService';
 import { BillItem } from '../types';
+import { NavigationContext, NavigationRouteContext } from '@react-navigation/native';
 import ReceiptViewer from '../components/ReceiptViewer';
+
+// Use the loaded font names from App.tsx (expo-google-fonts)
+const NEWSREADER_BOLD = 'Newsreader_700Bold';
+const NEWSREADER_ITALIC_BOLD = 'Newsreader_700Bold_Italic';
+const NEWSREADER_REGULAR = 'Newsreader_400Regular';
 
 export default function BillConfirmationScreen({ navigation, route }: any) {
     const { imageUri } = route.params;
@@ -25,12 +32,10 @@ export default function BillConfirmationScreen({ navigation, route }: any) {
         try {
             const rawData = await mockProcessBill(imageUri);
 
-            // Set Tax, Service Charge, and Tip
             if (rawData.tax) setTax(rawData.tax);
             if (rawData.serviceCharge) setServiceCharge(rawData.serviceCharge);
             if (rawData.tip) setTip(rawData.tip);
 
-            // Auto-split based on quantity
             const processedItems: BillItem[] = [];
 
             rawData.items.forEach(item => {
@@ -38,19 +43,18 @@ export default function BillConfirmationScreen({ navigation, route }: any) {
 
                 if (match) {
                     const quantity = parseInt(match[1]);
-                    const baseName = match[2];
+                    const baseName = toTitleCase(match[2]);
 
                     if (quantity > 1) {
-                        // Create Parent Group Item
                         const parentItem: BillItem = {
                             ...item,
+                            name: `${quantity} ${baseName}`,
                             isGroup: true,
                             id: `${item.id}_group`,
                             assignedTo: []
                         };
                         processedItems.push(parentItem);
 
-                        // Create Children
                         const newPrice = item.price / quantity;
                         for (let i = 0; i < quantity; i++) {
                             processedItems.push({
@@ -61,10 +65,10 @@ export default function BillConfirmationScreen({ navigation, route }: any) {
                             });
                         }
                     } else {
-                        processedItems.push(item);
+                        processedItems.push({ ...item, name: `${quantity} ${baseName}` });
                     }
                 } else {
-                    processedItems.push(item);
+                    processedItems.push({ ...item, name: toTitleCase(item.name) });
                 }
             });
 
@@ -81,11 +85,16 @@ export default function BillConfirmationScreen({ navigation, route }: any) {
         }
     };
 
+    const toTitleCase = (str: string) => {
+        return str.toLowerCase().split(' ').map(word => {
+            return word.charAt(0).toUpperCase() + word.slice(1);
+        }).join(' ');
+    };
+
     const updateItem = (id: string, field: 'name' | 'price', value: string) => {
         setItems(prevItems => prevItems.map(item => {
             if (item.id === id) {
                 if (field === 'price') {
-                    // Only allow numeric input
                     const numValue = parseFloat(value);
                     return { ...item, price: isNaN(numValue) ? 0 : numValue };
                 }
@@ -95,138 +104,158 @@ export default function BillConfirmationScreen({ navigation, route }: any) {
         }));
     };
 
+    const subtotal = items.filter(i => !i.isGroup).reduce((sum, item) => sum + item.price, 0);
+
     return (
-        <View className="flex-1 bg-black">
-            <Image source={{ uri: imageUri }} className="absolute w-full h-full opacity-50" resizeMode="cover" />
-            <BlurView intensity={80} tint="dark" className="flex-1">
-                <View style={{ paddingTop: insets.top }} className="flex-1">
-                    {/* Header */}
-                    <View className="flex-row items-center justify-between px-4 py-4 z-10">
-                        <TouchableOpacity onPress={() => navigation.goBack()} className="p-2 bg-white/10 rounded-full">
-                            <ArrowLeft size={24} color="white" />
-                        </TouchableOpacity>
-                        <Text className="text-white text-xl font-bold">Review Bill</Text>
-                        <View className="w-10" />
+        <NavigationContext.Provider value={navigation}>
+            <NavigationRouteContext.Provider value={route}>
+                <View style={{ flex: 1, backgroundColor: '#fcf9f4' }}>
+                    <View style={{ flex: 1 }}>
+                        <StatusBar style="dark" />
+                        <View style={{ paddingTop: insets.top, flex: 1 }}>
+                            {/* Header */}
+                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#fcf9f4', zIndex: 10, width: '100%' }}>
+                    <TouchableOpacity 
+                        onPress={() => navigation.goBack()} 
+                        className="w-11 h-11 items-center justify-center rounded-full active:scale-95 bg-white shadow-sm border border-outline-variant/30"
+                        activeOpacity={0.7}
+                    >
+                        <ArrowLeft size={24} color="#85341f" />
+                    </TouchableOpacity>
+                    <Text className="italic font-bold text-primary font-headline-italic" style={{ fontSize: 22 }}>Review Bill</Text>
+                    <View style={{ width: 44 }} className="items-end justify-center">
+                        <ReceiptViewer imageUri={imageUri} />
                     </View>
+                </View>
 
-                    {/* Persistent Receipt Viewer */}
-                    {!loading && <ReceiptViewer imageUri={imageUri} />}
+                {loading ? (
+                    <View className="flex-1 justify-center items-center">
+                        <ActivityIndicator size="large" color="#85341f" />
+                        <Text className="text-primary mt-6 font-headline text-2xl">Scanning Receipt...</Text>
+                    </View>
+                ) : (
+                    <KeyboardAvoidingView
+                        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                        style={{ flex: 1 }}
+                        keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
+                    >
+                        <View className="flex-1 p-6">
+                            <View className="flex-1 bg-white rounded-3xl shadow-xl border border-outline-variant/20 overflow-hidden">
+                                <View className="pt-6 pb-2 items-center">
+                                    <Text className="font-body-bold text-[10px] uppercase tracking-[0.2em] text-on-surface/40">Tap items to edit</Text>
+                                </View>
 
-                    {/* Content */}
-                    {loading ? (
-                        <View className="flex-1 justify-center items-center">
-                            <ActivityIndicator size="large" color="white" />
-                            <Text className="text-white mt-4 font-medium">Scanning Receipt...</Text>
-                        </View>
-                    ) : (
-                        <KeyboardAvoidingView
-                            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                            style={{ flex: 1 }}
-                        >
-                            <ScrollView className="flex-1 px-4" showsVerticalScrollIndicator={false}>
-                                <View className="bg-white/10 rounded-3xl p-6 mb-32 overflow-hidden border border-white/10 mt-4">
-                                    <Text className="text-gray-400 text-xs mb-4 text-center uppercase tracking-widest">Tap items to edit</Text>
-
+                                <ScrollView 
+                                    className="flex-1 px-5" 
+                                    showsVerticalScrollIndicator={false}
+                                    contentContainerStyle={{ paddingBottom: 20 }}
+                                    keyboardShouldPersistTaps="handled"
+                                >
                                     {items.map((item, index) => (
-                                        <Animated.View
-                                            entering={FadeInDown.delay(index * 100).duration(400)}
+                                        <View
                                             key={item.id}
-                                            style={[
-                                                { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12, alignItems: 'center' },
-                                                index !== items.length - 1 ? { borderBottomWidth: 1, borderColor: 'rgba(255,255,255,0.1)' } : {},
-                                                item.parentId ? { paddingLeft: 32 } : {}
-                                            ]}
+                                            className={`flex-row justify-between items-center py-4 border-b border-outline-variant/10 ${index === items.length - 1 ? 'border-b-0' : ''}`}
                                         >
                                             <View className="flex-1 mr-4">
                                                 <TextInput
                                                     value={item.name}
                                                     onChangeText={(text) => updateItem(item.id, 'name', text)}
-                                                    className={`text-white text-lg ${item.isGroup ? 'font-bold opacity-60' : ''}`}
-                                                    multiline
+                                                    className={`text-on-surface text-lg ${item.isGroup ? 'opacity-40 italic' : ''}`}
+                                                    style={{ fontFamily: NEWSREADER_BOLD, paddingVertical: 4 }}
+                                                    multiline={true}
+                                                    blurOnSubmit={true}
                                                 />
                                             </View>
-                                            <View className="flex-row items-center bg-black/20 rounded-lg px-2 py-1">
-                                                <Text className="text-gray-400 mr-1">$</Text>
+                                            <View className="flex-row items-center bg-white rounded-xl px-2 h-9 border border-outline-variant/20 shadow-sm">
+                                                <Text className="text-primary/60 mr-1 font-body font-bold" style={{ fontSize: 14, transform: [{ translateY: 1.5 }] }}>$</Text>
                                                 <TextInput
                                                     value={item.price.toString()}
                                                     onChangeText={(text) => updateItem(item.id, 'price', text)}
                                                     keyboardType="numeric"
-                                                    className={`text-white text-lg font-mono font-bold ${item.isGroup ? 'opacity-60' : ''}`}
-                                                    style={{ minWidth: 60, textAlign: 'right' }}
+                                                    className="text-on-surface text-base w-12 text-right font-body font-bold"
+                                                    style={{ padding: 0, transform: [{ translateY: -2.0 }] }}
                                                 />
                                             </View>
-                                        </Animated.View>
+                                        </View>
                                     ))}
 
-                                    <View className="mt-8 pt-4 border-t border-white/20">
-                                        <View className="flex-row justify-between mb-2">
-                                            <Text className="text-gray-300 text-lg">Subtotal</Text>
-                                            <Text className="text-white text-xl font-bold">
-                                                ${items.filter(i => !i.isGroup).reduce((sum, item) => sum + item.price, 0).toFixed(2)}
-                                            </Text>
-                                        </View>
-
-                                        <View className="flex-row justify-between mb-2 items-center">
-                                            <Text className="text-gray-300 text-sm">Taxes and Fees</Text>
-                                            <View className="flex-row items-center bg-black/20 rounded-lg px-2 py-1">
-                                                <Text className="text-gray-400 mr-1">$</Text>
-                                                <TextInput
-                                                    value={tax.toString()}
-                                                    onChangeText={(text) => setTax(parseFloat(text) || 0)}
-                                                    keyboardType="numeric"
-                                                    className="text-white text-sm font-bold min-w-[50px] text-right"
-                                                />
+                                    {/* Totals Section */}
+                                    <View className="bg-primary/[0.03] p-6 mt-8 rounded-3xl border border-outline-variant/40">
+                                        <View className="flex-row justify-between items-center mb-6">
+                                            <Text className="text-on-surface/60 text-lg font-body font-bold">Subtotal</Text>
+                                            <View className="flex-row items-baseline">
+                                                <Text className="text-primary/60 font-body font-bold text-3xl mr-1">$</Text>
+                                                <Text className="text-on-surface text-3xl font-body font-bold">
+                                                    {subtotal.toFixed(2)}
+                                                </Text>
                                             </View>
                                         </View>
 
-                                        <View className="flex-row justify-between mb-2 items-center">
-                                            <Text className="text-gray-300 text-sm">Service Charge</Text>
-                                            <View className="flex-row items-center bg-black/20 rounded-lg px-2 py-1">
-                                                <Text className="text-gray-400 mr-1">$</Text>
-                                                <TextInput
-                                                    value={serviceCharge.toString()}
-                                                    onChangeText={(text) => setServiceCharge(parseFloat(text) || 0)}
-                                                    keyboardType="numeric"
-                                                    className="text-white text-sm font-bold min-w-[50px] text-right"
-                                                />
+                                        <View className="space-y-4">
+                                            <View className="flex-row justify-between items-center mb-4">
+                                                <Text className="text-on-surface/60 text-base font-body font-bold">Taxes & Fees</Text>
+                                                <View className="flex-row items-center bg-white rounded-xl px-2 h-9 border border-outline-variant/20 shadow-sm">
+                                                    <Text className="text-primary/40 mr-1 font-body font-bold" style={{ fontSize: 14, transform: [{ translateY: 1.5 }] }}>$</Text>
+                                                    <TextInput
+                                                        value={tax.toString()}
+                                                        onChangeText={(text) => setTax(parseFloat(text) || 0)}
+                                                        keyboardType="numeric"
+                                                        className="text-on-surface text-base w-14 text-right font-body font-bold"
+                                                        style={{ padding: 0, transform: [{ translateY: -2.0 }] }}
+                                                    />
+                                                </View>
                                             </View>
-                                        </View>
 
-                                        <View className="flex-row justify-between items-center">
-                                            <Text className="text-gray-300 text-sm">Tip</Text>
-                                            <View className="flex-row items-center bg-black/20 rounded-lg px-2 py-1">
-                                                <Text className="text-gray-400 mr-1">$</Text>
-                                                <TextInput
-                                                    value={tip.toString()}
-                                                    onChangeText={(text) => setTip(parseFloat(text) || 0)}
-                                                    keyboardType="numeric"
-                                                    className="text-white text-sm font-bold min-w-[50px] text-right"
-                                                />
+                                            <View className="flex-row justify-between items-center mb-4">
+                                                <Text className="text-on-surface/60 text-base font-body font-bold">Service Charge</Text>
+                                                <View className="flex-row items-center bg-white rounded-xl px-2 h-9 border border-outline-variant/20 shadow-sm">
+                                                    <Text className="text-primary/40 mr-1 font-body font-bold" style={{ fontSize: 14, transform: [{ translateY: 1.5 }] }}>$</Text>
+                                                    <TextInput
+                                                        value={serviceCharge.toString()}
+                                                        onChangeText={(text) => setServiceCharge(parseFloat(text) || 0)}
+                                                        keyboardType="numeric"
+                                                        className="text-on-surface text-base w-14 text-right font-body font-bold"
+                                                        style={{ padding: 0, transform: [{ translateY: -2.0 }] }}
+                                                    />
+                                                </View>
+                                            </View>
+
+                                            <View className="flex-row justify-between items-center">
+                                                <Text className="text-on-surface/60 text-base font-body font-bold">Expected Tip</Text>
+                                                <View className="flex-row items-center bg-white rounded-xl px-2 h-9 border border-outline-variant/20 shadow-sm">
+                                                    <Text className="text-primary/40 mr-1 font-body font-bold" style={{ fontSize: 14, transform: [{ translateY: 1.5 }] }}>$</Text>
+                                                    <TextInput
+                                                        value={tip.toString()}
+                                                        onChangeText={(text) => setTip(parseFloat(text) || 0)}
+                                                        keyboardType="numeric"
+                                                        className="text-on-surface text-base w-14 text-right font-body font-bold"
+                                                        style={{ padding: 0, transform: [{ translateY: -2.0 }] }}
+                                                    />
+                                                </View>
                                             </View>
                                         </View>
                                     </View>
-                                </View>
-                            </ScrollView>
-                        </KeyboardAvoidingView>
-                    )}
+                                </ScrollView>
+                            </View>
+                        </View>
 
-                    {/* Bottom Action */}
-                    {!loading && (
-                        <Animated.View
-                            entering={FadeIn.delay(500)}
-                            style={{ paddingBottom: insets.bottom + 20, position: 'absolute', bottom: 0, width: '100%', paddingHorizontal: 24 }}
-                        >
+                        {/* Bottom Action */}
+                        <View className="px-6 pb-10 pt-2">
                             <TouchableOpacity
-                                className="bg-blue-600 p-4 rounded-2xl flex-row justify-center items-center shadow-lg shadow-blue-500/30"
+                                className="bg-primary py-5 rounded-3xl flex-row justify-center items-center shadow-lg active:scale-95"
                                 onPress={() => navigation.navigate('Splitting', { items, tax, serviceCharge, tip, imageUri })}
+                                activeOpacity={0.9}
                             >
-                                <Text className="text-white text-lg font-bold mr-2">Start Splitting</Text>
-                                <Check size={20} color="white" />
+                                <Text className="text-white text-xl font-headline mr-3">Start Splitting</Text>
+                                <Check size={22} color="white" strokeWidth={3} />
                             </TouchableOpacity>
-                        </Animated.View>
-                    )}
+                        </View>
+                    </KeyboardAvoidingView>
+                )}
+                        </View>
+                    </View>
                 </View>
-            </BlurView>
-        </View>
+            </NavigationRouteContext.Provider>
+        </NavigationContext.Provider>
     );
 }

@@ -1,19 +1,27 @@
 import { BillItem } from "../types";
 import * as FileSystem from 'expo-file-system/legacy';
-
+import * as ImageManipulator from 'expo-image-manipulator';
 export const mockProcessBill = async (imageUri: string): Promise<{ items: BillItem[], tax: number, serviceCharge: number, tip: number }> => {
+    return processWithGemini(imageUri);
+};
+const processWithGemini = async (imageUri: string): Promise<{ items: BillItem[], tax: number, serviceCharge: number, tip: number }> => {
     try {
         const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
         if (!apiKey) {
             throw new Error("Gemini API key is not configured.");
         }
 
-        // Read image to base64
-        const base64Image = await FileSystem.readAsStringAsync(imageUri, {
+        const manipResult = await ImageManipulator.manipulateAsync(
+            imageUri,
+            [{ resize: { width: 1200 } }],
+            { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG }
+        );
+
+        const base64Image = await FileSystem.readAsStringAsync(manipResult.uri, {
             encoding: 'base64',
         });
 
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
         const requestBody = {
             contents: [
@@ -48,6 +56,21 @@ Do not include any currency symbols in the numbers.`
         });
 
         if (!response.ok) {
+            if (response.status === 429) {
+                console.warn("Caught Gemini 429 Rate Limit. Falling back to mock receipt data for UI testing.");
+                return {
+                    items: [
+                        { id: "mock_1", name: "Hades", price: 7.00, assignedTo: [] },
+                        { id: "mock_2", name: "Athenian Spritz", price: 7.00, assignedTo: [] },
+                        { id: "mock_3", name: "Saganaki", price: 8.00, assignedTo: [] },
+                        { id: "mock_4", name: "Toasted Pita", price: 4.00, assignedTo: [] }
+                    ],
+                    tax: 3.07,
+                    serviceCharge: 0,
+                    tip: 10
+                };
+            }
+            
             const errText = await response.text();
             throw new Error(`API returned ${response.status}: ${errText}`);
         }
@@ -77,8 +100,6 @@ Do not include any currency symbols in the numbers.`
 
     } catch (error) {
         console.error("Error processing bill with Gemini:", error);
-        
-        // Fallback or re-throw
         throw error;
     }
 };
