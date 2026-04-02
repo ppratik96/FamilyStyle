@@ -4,9 +4,11 @@ import * as ImageManipulator from 'expo-image-manipulator';
 export const mockProcessBill = async (imageUri: string): Promise<{ items: BillItem[], tax: number, serviceCharge: number, tip: number }> => {
     return processWithGemini(imageUri);
 };
-const processWithGemini = async (imageUri: string): Promise<{ items: BillItem[], tax: number, serviceCharge: number, tip: number }> => {
+const processWithGemini = async (imageUri: string, isRetry = false): Promise<{ items: BillItem[], tax: number, serviceCharge: number, tip: number }> => {
     try {
-        const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
+        const rawApiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
+        const apiKey = rawApiKey?.replace(/['"]+/g, '').trim();
+        
         if (!apiKey) {
             throw new Error("Gemini API key is not configured.");
         }
@@ -21,19 +23,30 @@ const processWithGemini = async (imageUri: string): Promise<{ items: BillItem[],
             encoding: 'base64',
         });
 
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`;
 
         const requestBody = {
             contents: [
                 {
                     parts: [
                         {
-                            text: `Analyze this receipt. Return a JSON object representing the bill. The JSON must strictly contain:
-- "items": an array of objects. Each object must have "id" (a random unique string), "name" (string), and "price" (number). Do not include tax or tip in this array.
-- "tax": number (the total tax amount).
-- "serviceCharge": number (the total service charge or mandatory fee, if any).
-- "tip": number (the tip amount, or 0 if none is found).
-Do not include any currency symbols in the numbers.`
+                            text: `You are a professional receipt-parsing agent. Analyze this image and extract all bill details with 100% accuracy.
+                            
+                            Return a strictly valid JSON object with:
+                            - "items": Array of objects. Each object MUST have:
+                                - "id": A unique string (e.g. "item_1")
+                                - "name": The line item name. Include the quantity at the start if multiple (e.g. "2 Saganaki").
+                                - "price": The total price for that line item as a number (no symbols).
+                            - "tax": The total tax amount as a number.
+                            - "serviceCharge": The total service fee or mandatory charge, if any.
+                            - "tip": The tip or gratuity amount, if found.
+                            
+                            IMPORTANT: 
+                            1. Do not include currency symbols.
+                            2. Do not include the "Total" or "Subtotal" as an entry in the items array.
+                            3. Double-check all math.
+                            4. If an item is unclear, provide your best guess based on the context of other items.
+                            5. Return ONLY the JSON object. No markdown, no pre-text.`
                         },
                         {
                             inlineData: {
@@ -45,7 +58,7 @@ Do not include any currency symbols in the numbers.`
                 }
             ],
             generationConfig: {
-                responseMimeType: "application/json"
+                response_mime_type: "application/json"
             }
         };
 
@@ -56,23 +69,9 @@ Do not include any currency symbols in the numbers.`
         });
 
         if (!response.ok) {
-            if (response.status === 429) {
-                console.warn("Caught Gemini 429 Rate Limit. Falling back to mock receipt data for UI testing.");
-                return {
-                    items: [
-                        { id: "mock_1", name: "Hades", price: 7.00, assignedTo: [] },
-                        { id: "mock_2", name: "Athenian Spritz", price: 7.00, assignedTo: [] },
-                        { id: "mock_3", name: "Saganaki", price: 8.00, assignedTo: [] },
-                        { id: "mock_4", name: "Toasted Pita", price: 4.00, assignedTo: [] }
-                    ],
-                    tax: 3.07,
-                    serviceCharge: 0,
-                    tip: 10
-                };
-            }
-            
             const errText = await response.text();
-            throw new Error(`API returned ${response.status}: ${errText}`);
+            console.error(`Gemini API Error (${response.status}):`, errText);
+            throw new Error(`Gemini API returned ${response.status}: ${errText}`);
         }
 
         const data = await response.json();
