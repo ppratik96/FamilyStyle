@@ -36,7 +36,7 @@ const getUserColor = (userId: string) => {
 };
 
 export default function ResultScreen({ navigation, route }: any) {
-    const { items, users, tax: initialTax = 0, serviceCharge: initialServiceCharge = 0, tip: initialTip = 0, imageUri } = route.params;
+    const { items, users, tax: initialTax = 0, serviceCharge: initialServiceCharge = 0, tip: initialTip = 0, imageUri, restaurantName } = route.params;
     const insets = useSafeAreaInsets();
 
     const subtotal = items.reduce((sum: number, item: BillItem) => sum + item.price, 0);
@@ -45,7 +45,7 @@ export default function ResultScreen({ navigation, route }: any) {
     const [serviceChargeAmount, setServiceChargeAmount] = useState(initialServiceCharge.toFixed(2));
     const [tipAmount, setTipAmount] = useState(initialTip.toFixed(2));
     const [venmoUsername, setVenmoUsername] = useState('');
-    const [paymentNote, setPaymentNote] = useState('Split Bill');
+    const [paymentNote, setPaymentNote] = useState(restaurantName ? `Dinner at ${restaurantName}` : '');
 
     React.useEffect(() => {
         const loadSettings = async () => {
@@ -100,7 +100,8 @@ export default function ResultScreen({ navigation, route }: any) {
     };
 
     const generateSummary = () => {
-        let summary = `🍽️ ${paymentNote}\n\n`;
+        const note = paymentNote.trim() || 'Bill Summary';
+        let summary = `🍽️ ${note}\n\n`;
         users.forEach((user: User) => {
             if (user.id === 'me') return;
             const { total } = calculateUserTotal(user.id);
@@ -136,11 +137,12 @@ export default function ResultScreen({ navigation, route }: any) {
         const isAvailable = await SMS.isAvailableAsync();
         if (isAvailable) {
             const recipients = user.phoneNumber ? [user.phoneNumber] : [];
-            let message = `Hey, your share of ${paymentNote} is $${amount.toFixed(2)}.`;
+            const note = paymentNote.trim() || 'the bill';
+            let message = `Hey, your share of ${note} is $${amount.toFixed(2)}.`;
             
             if (venmoUsername.trim()) {
                 const cleanUsername = venmoUsername.trim().replace('@', '');
-                message += ` You can venmo me here https://venmo.com/${cleanUsername}?txn=pay&amount=${amount.toFixed(2)}&note=${encodeURIComponent(paymentNote)}`;
+                message += ` You can venmo me here https://venmo.com/${cleanUsername}?txn=pay&amount=${amount.toFixed(2)}&note=${encodeURIComponent(note)}`;
             }
             
             await SMS.sendSMSAsync(recipients, message);
@@ -168,19 +170,12 @@ export default function ResultScreen({ navigation, route }: any) {
                                 <Text className="italic font-bold text-primary font-headline-italic" style={{ fontSize: 22 }}>Final Tally</Text>
                                 <View className="flex-row items-center">
                                     <ReceiptViewer imageUri={imageUri} />
-                                    <TouchableOpacity 
-                                        onPress={() => navigation.navigate('Home')} 
-                                        className="w-11 h-11 items-center justify-center rounded-full active:scale-95 bg-white shadow-sm border border-outline-variant/30 ml-3"
-                                        activeOpacity={0.7}
-                                    >
-                                        <Home size={20} color="#85341f" />
-                                    </TouchableOpacity>
                                 </View>
                             </View>
 
                             <ScrollView className="flex-1 px-6 mt-4" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 150 }}>
                                 {/* Global Settings & Payment */}
-                                <View className="bg-white rounded-3xl p-6 mb-8 border border-outline-variant/20 shadow-xl">
+                                <View className="bg-white rounded-3xl p-6 mb-8 border border-outline-variant/20 shadow-sm">
                                     <Text className="text-primary text-xl font-headline mb-5">Adjustments & Payment</Text>
                                     
                                     <View className="space-y-4">
@@ -191,12 +186,12 @@ export default function ResultScreen({ navigation, route }: any) {
                                                 <Text className="text-primary/50 text-xs font-body">{subtotal > 0 ? ((parseFloat(taxAmount) || 0) / subtotal * 100).toFixed(2) : 0}%</Text>
                                             </View>
                                             <View className="bg-surface-container-low border border-outline-variant/30 rounded-xl px-3 py-1 w-24 flex-row items-center">
-                                                <Text className="text-primary/40 font-headline text-base mr-1" style={{ transform: [{ translateY: 2.5 }] }}>$</Text>
+                                                <Text className="text-primary/40 font-body-bold text-base mr-1" style={{ transform: [{ translateY: 2.5 }] }}>$</Text>
                                                 <TextInput
                                                     value={taxAmount}
                                                     onChangeText={setTaxAmount}
                                                     keyboardType="decimal-pad"
-                                                    className="text-on-surface text-right font-headline text-base flex-1"
+                                                    className="text-on-surface text-right font-body-bold text-base flex-1"
                                                     style={{ padding: 0, height: 32, transform: [{ translateY: -2.0 }] }}
                                                 />
                                             </View>
@@ -209,12 +204,12 @@ export default function ResultScreen({ navigation, route }: any) {
                                                 <Text className="text-primary/50 text-xs font-body">{subtotal > 0 ? ((parseFloat(serviceChargeAmount) || 0) / subtotal * 100).toFixed(2) : 0}%</Text>
                                             </View>
                                             <View className="bg-surface-container-low border border-outline-variant/30 rounded-xl px-3 py-1 w-24 flex-row items-center">
-                                                <Text className="text-primary/40 font-headline text-base mr-1" style={{ transform: [{ translateY: 2.5 }] }}>$</Text>
+                                                <Text className="text-primary/40 font-body-bold text-base mr-1" style={{ transform: [{ translateY: 2.5 }] }}>$</Text>
                                                 <TextInput
                                                     value={serviceChargeAmount}
                                                     onChangeText={setServiceChargeAmount}
                                                     keyboardType="decimal-pad"
-                                                    className="text-on-surface text-right font-headline text-base flex-1"
+                                                    className="text-on-surface text-right font-body-bold text-base flex-1"
                                                     style={{ padding: 0, height: 32, transform: [{ translateY: -2.0 }] }}
                                                 />
                                             </View>
@@ -223,16 +218,16 @@ export default function ResultScreen({ navigation, route }: any) {
                                         {/* Adjustment Row: Tip */}
                                         <View className="flex-row justify-between items-center mb-6">
                                             <View className="flex-1">
-                                                <Text className="text-on-surface/60 font-body font-bold text-base">Expected Tip</Text>
+                                                <Text className="text-on-surface/60 font-body font-bold text-base">Tip</Text>
                                                 <Text className="text-primary/50 text-xs font-body">{subtotal > 0 ? ((parseFloat(tipAmount) || 0) / subtotal * 100).toFixed(2) : 0}%</Text>
                                             </View>
                                             <View className="bg-surface-container-low border border-outline-variant/30 rounded-xl px-3 py-1 w-24 flex-row items-center">
-                                                <Text className="text-primary/40 font-headline text-base mr-1" style={{ transform: [{ translateY: 2.5 }] }}>$</Text>
+                                                <Text className="text-primary/40 font-body-bold text-base mr-1" style={{ transform: [{ translateY: 2.5 }] }}>$</Text>
                                                 <TextInput
                                                     value={tipAmount}
                                                     onChangeText={setTipAmount}
                                                     keyboardType="decimal-pad"
-                                                    className="text-on-surface text-right font-headline text-base flex-1"
+                                                    className="text-on-surface text-right font-body-bold text-base flex-1"
                                                     style={{ padding: 0, height: 32, transform: [{ translateY: -2.0 }] }}
                                                 />
                                             </View>
@@ -242,17 +237,32 @@ export default function ResultScreen({ navigation, route }: any) {
 
                                         {/* Venmo Row */}
                                         <View className="flex-row items-center mt-4">
-                                            <Text className="text-on-surface/60 font-body font-bold text-base w-20">Venmo</Text>
+                                            <Text className="text-on-surface/60 font-body font-bold text-base w-24">Venmo</Text>
                                             <View className="bg-surface-container-low border border-outline-variant/30 rounded-xl px-3 py-1 flex-1 flex-row items-center">
-                                                <Text className="text-primary/40 font-headline text-base mr-1" style={{ transform: [{ translateY: 3.5 }] }}>@</Text>
+                                                <Text className="text-primary/40 font-body-bold text-base mr-1" style={{ transform: [{ translateY: 3.5 }] }}>@</Text>
                                                 <TextInput
                                                     value={venmoUsername}
                                                     onChangeText={saveVenmoUsername}
                                                     placeholder="yourusername"
                                                     placeholderTextColor="#a1a1aa"
-                                                    className="text-on-surface font-headline text-base flex-1"
+                                                    className="text-on-surface font-body-bold text-base flex-1"
                                                     autoCapitalize="none"
                                                     autoCorrect={false}
+                                                    style={{ padding: 0, height: 32, transform: [{ translateY: -2.0 }] }}
+                                                />
+                                            </View>
+                                        </View>
+
+                                        {/* Description Row */}
+                                        <View className="flex-row items-center mt-4">
+                                            <Text className="text-on-surface/60 font-body font-bold text-base w-24">Description</Text>
+                                            <View className="bg-surface-container-low border border-outline-variant/30 rounded-xl px-3 py-1 flex-1 flex-row items-center">
+                                                <TextInput
+                                                    value={paymentNote}
+                                                    onChangeText={setPaymentNote}
+                                                    placeholder="Dinner at Saganaki..."
+                                                    placeholderTextColor="#a1a1aa"
+                                                    className="text-on-surface font-body-bold text-base flex-1"
                                                     style={{ padding: 0, height: 32, transform: [{ translateY: -2.0 }] }}
                                                 />
                                             </View>
@@ -270,7 +280,7 @@ export default function ResultScreen({ navigation, route }: any) {
                                     return (
                                         <View
                                             key={user.id}
-                                            className="bg-white rounded-3xl p-6 mb-5 border border-outline-variant/20 shadow-xl"
+                                            className="bg-white rounded-3xl p-6 mb-5 border border-outline-variant/20 shadow-sm"
                                         >
                                             <View className="flex-row justify-between items-center">
                                                 <View className="flex-row items-center flex-1 pr-4">
@@ -290,11 +300,11 @@ export default function ResultScreen({ navigation, route }: any) {
                                                                     marginRight: 16 
                                                                 }}
                                                             >
-                                                                <Text style={{ fontFamily: NEWSREADER_BOLD, fontSize: 18, color: '#85341f' }}>{user.initials}</Text>
+                                                                <Text style={{ fontWeight: '700', fontSize: 18, color: '#85341f' }}>{user.initials}</Text>
                                                             </View>
                                                         );
                                                     })()}
-                                                    <Text className="text-on-surface font-headline text-xl flex-1" numberOfLines={1}>{user.name}</Text>
+                                                    <Text className="text-on-surface font-body-bold text-xl flex-1" numberOfLines={1}>{user.name}</Text>
                                                 </View>
                                                 <View className="flex-row items-baseline">
                                                     <Text className="text-primary/60 font-body font-bold text-lg mr-0.5">$</Text>
@@ -351,7 +361,7 @@ export default function ResultScreen({ navigation, route }: any) {
                                     className="flex-1 bg-white border border-outline-variant/50 h-16 rounded-3xl flex-row justify-center items-center shadow-sm active:scale-[0.98]"
                                 >
                                     <Copy size={20} color="#85341f" />
-                                    <Text className="text-primary font-headline text-base ml-2">Copy Text</Text>
+                                    <Text className="text-primary font-body-bold text-base ml-2">Copy Text</Text>
                                 </TouchableOpacity>
 
                                 <TouchableOpacity
@@ -366,7 +376,7 @@ export default function ResultScreen({ navigation, route }: any) {
                                     }}
                                 >
                                     <ShareIcon size={20} color="white" />
-                                    <Text className="text-white font-headline text-base ml-2">Share Summary</Text>
+                                    <Text className="text-white font-body-bold text-base ml-2">Share Summary</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>

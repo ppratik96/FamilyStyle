@@ -11,7 +11,7 @@ const { width } = Dimensions.get('window');
 export default function HomeScreen({ navigation }: any) {
     const pickImage = async () => {
         let result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            mediaTypes: 'images',
             allowsEditing: false,
             quality: 0.4,
         });
@@ -82,7 +82,7 @@ export default function HomeScreen({ navigation }: any) {
                     >
                         <Camera size={20} color="white" strokeWidth={2.5} />
                         <Text className="text-white font-body-bold tracking-tight text-[15px] ml-3">
-                            Take Pic of Receipt
+                            Scan Receipt
                         </Text>
                     </TouchableOpacity>
 

@@ -62,7 +62,7 @@ export default function CameraScreen({ navigation, route }: any) {
     const pickImage = async () => {
         // No permissions request is necessary for launching the image library
         let result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            mediaTypes: 'images',
             allowsEditing: false,
             quality: 0.4,
         });

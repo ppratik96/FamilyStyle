@@ -35,7 +35,7 @@ const getUserColor = (userId: string) => {
 };
 
 export default function SplittingScreen({ navigation, route }: any) {
-    const { items: initialItems, imageUri } = route.params;
+    const { items: initialItems, imageUri, restaurantName } = route.params;
     const insets = useSafeAreaInsets();
 
     const [items, setItems] = useState<BillItem[]>(initialItems.filter((i: BillItem) => !i.isGroup));
@@ -264,7 +264,7 @@ export default function SplittingScreen({ navigation, route }: any) {
                                                 shadowOpacity: 0.04, 
                                                 shadowRadius: 3
                                             }}>
-                                                <Text style={{ fontFamily: NEWSREADER_BOLD, fontSize: 18, color: '#85341f' }}>{user.initials}</Text>
+                                                <Text style={{ fontWeight: '700', fontSize: 18, color: '#85341f' }}>{user.initials}</Text>
                                                 {maxShares > 1 && (
                                                     <View style={{ position: 'absolute', top: -2, left: -2, backgroundColor: '#1c1c19', borderRadius: 10, minWidth: 20, height: 20, justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: '#fcf9f4' }}>
                                                         <Text style={{ color: 'white', fontSize: 9, fontWeight: 'bold' }}>x{maxShares}</Text>
@@ -310,6 +310,32 @@ export default function SplittingScreen({ navigation, route }: any) {
                             </ScrollView>
                         </View>
 
+                        {/* Global Actions */}
+                        <View style={{ alignItems: 'center', marginBottom: 16 }}>
+                            <TouchableOpacity
+                                onPress={() => {
+                                    const allUserIds = users.flatMap(u => {
+                                        const shares = getUserMaxShares(u.id);
+                                        return Array(shares).fill(u.id);
+                                    });
+                                    setItems(prevItems => prevItems.map(item => ({
+                                        ...item,
+                                        assignedTo: [...allUserIds]
+                                    })));
+                                }}
+                                style={{
+                                    backgroundColor: 'rgba(133, 52, 31, 0.08)',
+                                    borderWidth: 1,
+                                    borderColor: 'rgba(133, 52, 31, 0.15)',
+                                    paddingHorizontal: 16,
+                                    paddingVertical: 8,
+                                    borderRadius: 16,
+                                }}
+                                activeOpacity={0.7}
+                            >
+                                <Text style={{ color: '#85341f', fontSize: 11, fontWeight: '800', letterSpacing: 0.5 }}>SPLIT ALL ITEMS EVENLY</Text>
+                            </TouchableOpacity>
+                        </View>
                         {/* Item List */}
                         <View style={{ flex: 1 }}>
                             <FlatList
@@ -323,17 +349,14 @@ export default function SplittingScreen({ navigation, route }: any) {
                                     const isSelected = selectedItemId === item.id;
 
                                     return (
-                                        <View style={{ 
+                                        <View 
+                                            className="shadow-sm"
+                                            style={{ 
                                             backgroundColor: '#ffffff', 
                                             borderRadius: 24,
                                             borderWidth: 1.2, 
                                             borderColor: 'rgba(219, 193, 186, 0.45)',
-                                            shadowColor: '#1c1c19', 
-                                            shadowOffset: { width: 0, height: 4 }, 
-                                            shadowOpacity: 0.04, 
-                                            shadowRadius: 10,
                                             marginHorizontal: 2, // Slight buffer
-                                            elevation: 2,
                                             paddingHorizontal: 16,
                                             paddingVertical: 14
                                         }}>
@@ -348,14 +371,14 @@ export default function SplittingScreen({ navigation, route }: any) {
                                             >
                                                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                                                     <View style={{ flex: 1, paddingRight: 20 }}>
-                                                        <Text style={{ fontFamily: NEWSREADER_BOLD, fontSize: 18, color: '#1c1c19', letterSpacing: -0.2, lineHeight: 22 }}>{item.name}</Text>
-                                                        <Text style={{ fontFamily: NEWSREADER_REGULAR, fontStyle: 'italic', fontSize: 13, color: '#85341f', opacity: 0.5, marginTop: 4 }}>
+                                                        <Text style={{ fontWeight: '700', fontSize: 16, color: '#1c1c19', letterSpacing: -0.2, lineHeight: 22 }}>{item.name}</Text>
+                                                        <Text style={{ fontStyle: 'italic', fontSize: 13, color: '#85341f', opacity: 0.5, marginTop: 4 }}>
                                                             {isSplit ? `Split with ${item.assignedTo.length} ${item.assignedTo.length === 1 ? 'person' : 'people'}` : 'Unassigned'}
                                                         </Text>
                                                     </View>
-                                                    <View className="flex-row items-baseline">
-                                                        <Text className="text-primary/60 font-body font-bold text-xl mr-0.5">$</Text>
-                                                        <Text className="text-on-surface font-body font-bold text-xl">
+                                                    <View className="flex-row items-center">
+                                                        <Text className="text-primary/60 font-body font-bold mr-1" style={{ fontSize: 14, transform: [{ translateY: 1.5 }] }}>$</Text>
+                                                        <Text className="text-on-surface font-body font-bold" style={{ fontSize: 16 }}>
                                                             {item.price.toFixed(2)}
                                                         </Text>
                                                     </View>
@@ -384,7 +407,7 @@ export default function SplittingScreen({ navigation, route }: any) {
                                                                         shadowOpacity: 0.05, 
                                                                         shadowRadius: 3 
                                                                     }}>
-                                                                        <Text style={{ fontFamily: NEWSREADER_BOLD, fontSize: 11, color: '#85341f', transform: [{ translateY: 1.0 }] }}>{u?.initials}</Text>
+                                                                        <Text style={{ fontWeight: '700', fontSize: 11, color: '#85341f', transform: [{ translateY: 1.0 }] }}>{u?.initials}</Text>
                                                                         {count > 1 && (
                                                                             <View style={{ position: 'absolute', top: -4, right: -4, backgroundColor: '#1c1c19', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#f6f3ee' }}>
                                                                                 <Text style={{ color: 'white', fontSize: 7, fontWeight: 'bold' }}>{count}</Text>
@@ -423,7 +446,15 @@ export default function SplittingScreen({ navigation, route }: any) {
                         <Pressable 
                             onPress={() => {
                                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                                navigation.navigate('Result', { items, users, tax: route.params.tax, serviceCharge: route.params.serviceCharge, tip: route.params.tip, imageUri });
+                                navigation.navigate('Result', { 
+                                    items, 
+                                    users, 
+                                    tax: route.params.tax, 
+                                    serviceCharge: route.params.serviceCharge, 
+                                    tip: route.params.tip, 
+                                    imageUri,
+                                    restaurantName: route.params.restaurantName
+                                });
                             }} 
                             style={({ pressed }) => ({
                                 transform: [{ scale: pressed ? 0.98 : 1 }],
@@ -444,7 +475,7 @@ export default function SplittingScreen({ navigation, route }: any) {
                                     justifyContent: 'center'
                                 }}
                             >
-                                <Text style={{ color: 'white', fontSize: 18, fontWeight: '800', fontFamily: NEWSREADER_BOLD, letterSpacing: 0.5 }}>Review & Send</Text>
+                                <Text style={{ color: 'white', fontSize: 18, fontWeight: '800', letterSpacing: 0.5 }}>Review & Send</Text>
                             </View>
                         </Pressable>
                     </View>
@@ -459,7 +490,9 @@ export default function SplittingScreen({ navigation, route }: any) {
                                 <View style={{ flex: 1, backgroundColor: 'rgba(28, 28, 25, 0.4)' }} />
                             </Pressable>
                             
-                            <View style={{ 
+                            <View 
+                                className="shadow-lg"
+                                style={{ 
                                 position: 'absolute', 
                                 bottom: insets.bottom + 120, 
                                 left: 16, 
@@ -469,10 +502,6 @@ export default function SplittingScreen({ navigation, route }: any) {
                                 paddingHorizontal: 20, 
                                 paddingTop: 24,
                                 paddingBottom: 32,
-                                shadowColor: '#000', 
-                                shadowOffset: { width: 0, height: 12 }, 
-                                shadowOpacity: 0.15, 
-                                shadowRadius: 24, 
                                 borderWidth: 1, 
                                 borderColor: 'rgba(219, 193, 186, 0.5)',
                             }}>
@@ -535,7 +564,7 @@ export default function SplittingScreen({ navigation, route }: any) {
                                                                 <Users size={20} color="#85341f" />
                                                             </View>
                                                         </Pressable>
-                                                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#1c1c19', marginTop: 10, fontFamily: NEWSREADER_BOLD, textAlign: 'center', lineHeight: 13 }}>ALL</Text>
+                                                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#1c1c19', marginTop: 10, textAlign: 'center', lineHeight: 13 }}>ALL</Text>
                                                     </View>
                                                     {users.map(user => {
                                                         const shares = activeItem.assignedTo.filter(id => id === user.id).length;
@@ -562,7 +591,7 @@ export default function SplittingScreen({ navigation, route }: any) {
                                                                         shadowOpacity: 0.08, 
                                                                         shadowRadius: 4
                                                                     }}>
-                                                                        <Text style={{ fontFamily: NEWSREADER_BOLD, fontSize: 16, color: '#85341f', textAlign: 'center' }}>{user.initials}</Text>
+                                                                        <Text style={{ fontWeight: '700', fontSize: 16, color: '#85341f', textAlign: 'center' }}>{user.initials}</Text>
                                                                         {shares > 1 && (
                                                                             <View style={{ position: 'absolute', top: -4, right: -4, backgroundColor: '#1c1c19', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#fcf9f4' }}>
                                                                                 <Text style={{ color: 'white', fontSize: 7, fontWeight: 'bold' }}>{shares}</Text>
@@ -575,7 +604,7 @@ export default function SplittingScreen({ navigation, route }: any) {
                                                                         )}
                                                                     </View>
                                                                 </Pressable>
-                                                                <Text style={{ fontSize: 11, color: '#1c1c19', marginTop: 10, fontFamily: NEWSREADER_REGULAR, fontWeight: '600', textAlign: 'center', lineHeight: 13 }} numberOfLines={2}>
+                                                                <Text style={{ fontSize: 11, color: '#1c1c19', marginTop: 10, fontWeight: '600', textAlign: 'center', lineHeight: 13 }} numberOfLines={2}>
                                                                     {user.name}
                                                                 </Text>
                                                             </View>
