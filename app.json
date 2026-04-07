@@ -14,7 +14,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.pratikpatel.familystyle"
+      "bundleIdentifier": "com.pratikpatel.familystyle",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -22,14 +25,43 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_CONTACTS",
+        "android.permission.WRITE_CONTACTS"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-asset",
-      "expo-font"
-    ]
+      "expo-font",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow FamilyStyle to access your camera to scan receipts."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow FamilyStyle to access your photos to select receipt images."
+        }
+      ],
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "Allow FamilyStyle to access your contacts to add friends to your split."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "c634ba78-a220-4036-9761-c24796c0b0ea"
+      }
+    }
   }
 }
