@@ -49,13 +49,16 @@ export const processBillWithGemini = onRequest(
                   "tax": total_tax_number,
                   "serviceCharge": total_service_fee_number,
                   "tip": tip_amount_number,
+                  "discount": total_discount_amount_as_positive_number_or_zero,
+                  "subtotal": the_subtotal_before_tax_and_discounts,
                   "restaurantName": "The name of the restaurant or merchant"
                 }
                 
                 IMPORTANT: 
                 1. Do not use currency symbols.
                 2. Do not include 'Total' or 'Subtotal' in the items array.
-                3. Return ONLY the JSON object.`,
+                3. Return ONLY the JSON object.
+                4. Exclude discounts from the items array. They should ONLY be in the discount field.`,
               },
               {
                 inlineData: {
@@ -66,6 +69,9 @@ export const processBillWithGemini = onRequest(
             ],
           },
         ],
+        generationConfig: {
+          responseMimeType: "application/json",
+        },
       };
 
       const response = await fetch(url, {
@@ -86,11 +92,7 @@ export const processBillWithGemini = onRequest(
 
       let parsedData;
       try {
-        // Strip out any markdown formatting that Gemini might accidentally include
-        let cleanText = textResponse.replace(/^```json\s*/i, "").replace(/```\s*$/, "").trim();
-        // Fallback for simple backticks without 'json'
-        cleanText = cleanText.replace(/^```\s*/, "").replace(/```\s*$/, "").trim();
-        parsedData = JSON.parse(cleanText);
+        parsedData = JSON.parse(textResponse);
       } catch (e) {
         logger.error("Failed to parse JSON from Gemini:", textResponse);
         res.status(500).send("Invalid response format from Gemini.");

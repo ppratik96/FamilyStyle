@@ -23,6 +23,8 @@ export default function BillConfirmationScreen({ navigation, route }: any) {
     const [tax, setTax] = useState(0);
     const [serviceCharge, setServiceCharge] = useState(0);
     const [tip, setTip] = useState(0);
+    const [discount, setDiscount] = useState(0);
+    const [expectedSubtotal, setExpectedSubtotal] = useState(0);
     const [restaurantName, setRestaurantName] = useState<string | undefined>();
 
     useEffect(() => {
@@ -36,6 +38,8 @@ export default function BillConfirmationScreen({ navigation, route }: any) {
             if (rawData.tax) setTax(rawData.tax);
             if (rawData.serviceCharge) setServiceCharge(rawData.serviceCharge);
             if (rawData.tip) setTip(rawData.tip);
+            if (rawData.discount) setDiscount(rawData.discount);
+            if (rawData.subtotal) setExpectedSubtotal(rawData.subtotal);
             if (rawData.restaurantName) setRestaurantName(rawData.restaurantName);
 
             const processedItems: BillItem[] = [];
@@ -214,8 +218,30 @@ export default function BillConfirmationScreen({ navigation, route }: any) {
                                                 </Text>
                                             </View>
                                         </View>
+                                        {expectedSubtotal > 0 && Math.abs(subtotal - expectedSubtotal) > 0.05 && (
+                                            <View className="bg-red-50 p-3 rounded-xl mb-6 border border-red-100 flex-row items-center">
+                                                <Text className="text-red-800 text-xs font-medium flex-1">
+                                                    Heads up! The sum of items (${subtotal.toFixed(2)}) doesn't match the receipt subtotal (${expectedSubtotal.toFixed(2)}). Please add missing items or check prices above.
+                                                </Text>
+                                            </View>
+                                        )}
 
                                         <View className="space-y-4">
+                                            <View className="flex-row justify-between items-center mb-4">
+                                                <Text className="text-on-surface/60 text-base font-body font-bold">Discount</Text>
+                                                <View className="flex-row items-center bg-white rounded-xl px-2 h-9 border border-outline-variant/20 shadow-sm">
+                                                    <Text className="text-green-700 font-body font-bold mr-0.5 text-base" style={{ transform: [{ translateY: 1.5 }] }}>-</Text>
+                                                    <Text className="text-primary/40 mr-1 font-body font-bold" style={{ fontSize: 14, transform: [{ translateY: 1.5 }] }}>$</Text>
+                                                    <TextInput
+                                                        value={discount.toString()}
+                                                        onChangeText={(text) => setDiscount(parseFloat(text) || 0)}
+                                                        keyboardType="numeric"
+                                                        className="text-on-surface text-base w-14 text-right font-body font-bold text-green-700"
+                                                        style={{ padding: 0, transform: [{ translateY: -2.0 }] }}
+                                                    />
+                                                </View>
+                                            </View>
+
                                             <View className="flex-row justify-between items-center mb-4">
                                                 <Text className="text-on-surface/60 text-base font-body font-bold">Taxes & Fees</Text>
                                                 <View className="flex-row items-center bg-white rounded-xl px-2 h-9 border border-outline-variant/20 shadow-sm">
@@ -244,7 +270,7 @@ export default function BillConfirmationScreen({ navigation, route }: any) {
                                                 </View>
                                             </View>
 
-                                            <View className="flex-row justify-between items-center">
+                                            <View className="flex-row justify-between items-center mb-4">
                                                 <Text className="text-on-surface/60 text-base font-body font-bold">Tip</Text>
                                                 <View className="flex-row items-center bg-white rounded-xl px-2 h-9 border border-outline-variant/20 shadow-sm">
                                                     <Text className="text-primary/40 mr-1 font-body font-bold" style={{ fontSize: 14, transform: [{ translateY: 1.5 }] }}>$</Text>
@@ -257,6 +283,18 @@ export default function BillConfirmationScreen({ navigation, route }: any) {
                                                     />
                                                 </View>
                                             </View>
+
+                                            <View className="h-[1px] bg-outline-variant/30 w-full mb-4" />
+
+                                            <View className="flex-row justify-between items-center">
+                                                <Text className="text-on-surface text-lg font-body font-bold">Total</Text>
+                                                <View className="flex-row items-baseline">
+                                                    <Text className="text-primary/60 font-body font-bold text-xl mr-1">$</Text>
+                                                    <Text className="text-on-surface text-xl font-body font-bold">
+                                                        {Math.max(0, subtotal - discount + tax + serviceCharge + tip).toFixed(2)}
+                                                    </Text>
+                                                </View>
+                                            </View>
                                         </View>
                                     </View>
                                 </ScrollView>
@@ -267,7 +305,7 @@ export default function BillConfirmationScreen({ navigation, route }: any) {
                         <View className="px-6 pb-10 pt-2">
                             <TouchableOpacity
                                 className="bg-primary py-5 rounded-3xl flex-row justify-center items-center shadow-lg active:scale-95"
-                                onPress={() => navigation.navigate('Splitting', { items, tax, serviceCharge, tip, imageUri, restaurantName })}
+                                onPress={() => navigation.navigate('Splitting', { items, tax, serviceCharge, tip, discount, expectedSubtotal, imageUri, restaurantName })}
                                 activeOpacity={0.9}
                             >
                                 <Text className="text-white text-xl font-body-bold mr-3">Start Splitting</Text>

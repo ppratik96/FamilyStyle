@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Modal, FlatList, TextInput, ActivityIndicator, Platform, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, Plus, X, Users, Check } from 'lucide-react-native';
+import { ArrowLeft, Plus, X, Users, Check, ChevronDown, ChevronUp } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
@@ -43,6 +43,10 @@ export default function SplittingScreen({ navigation, route }: any) {
     const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
     const [displayItemId, setDisplayItemId] = useState<string | null>(null);
     const [isContactModalVisible, setContactModalVisible] = useState(false);
+    const [isNewContactExpanded, setIsNewContactExpanded] = useState(false);
+    const [manualFirstName, setManualFirstName] = useState('');
+    const [manualLastName, setManualLastName] = useState('');
+    const [manualPhone, setManualPhone] = useState('');
     const [contacts, setContacts] = useState<User[]>([]);
     const [loadingContacts, setLoadingContacts] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -452,6 +456,8 @@ export default function SplittingScreen({ navigation, route }: any) {
                                     tax: route.params.tax, 
                                     serviceCharge: route.params.serviceCharge, 
                                     tip: route.params.tip, 
+                                    discount: route.params.discount,
+                                    expectedSubtotal: route.params.expectedSubtotal,
                                     imageUri,
                                     restaurantName: route.params.restaurantName
                                 });
@@ -622,11 +628,89 @@ export default function SplittingScreen({ navigation, route }: any) {
                     {/* Contact Modal */}
                     <Modal visible={isContactModalVisible} animationType="slide" presentationStyle="pageSheet">
                         <View style={{ flex: 1, backgroundColor: '#fcf9f4' }}>
-                            <View style={{ padding: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#f0ede4' }}>
-                                <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#1c1c19' }}>Select Contact</Text>
+                            <View style={{ padding: 20, flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' }}>
                                 <TouchableOpacity onPress={() => setContactModalVisible(false)}><Text style={{ color: '#85341f', fontSize: 18, fontWeight: '600' }}>Done</Text></TouchableOpacity>
                             </View>
-                            <View style={{ padding: 16 }}>
+                            <View style={{ paddingHorizontal: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#f0ede4' }}>
+                                <TouchableOpacity 
+                                    style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: isNewContactExpanded ? 16 : 0, paddingVertical: isNewContactExpanded ? 0 : 8 }}
+                                    onPress={() => setIsNewContactExpanded(!isNewContactExpanded)}
+                                    activeOpacity={0.7}
+                                >
+                                    <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#1c1c19' }}>New Contact</Text>
+                                    {isNewContactExpanded ? <ChevronUp size={24} color="#85341f" /> : <ChevronDown size={24} color="#85341f" />}
+                                </TouchableOpacity>
+                                
+                                {isNewContactExpanded && (
+                                    <>
+                                        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+                                            <View style={{ flex: 1, justifyContent: 'center' }}>
+                                                <TextInput 
+                                                    style={{ backgroundColor: '#ffffff', borderRadius: 12, padding: 12, fontSize: 16, borderWidth: 1, borderColor: '#dbc1ba' }} 
+                                                    value={manualFirstName} 
+                                                    onChangeText={setManualFirstName} 
+                                                />
+                                                {manualFirstName === '' && (
+                                                    <View style={{ position: 'absolute', left: 12, flexDirection: 'row', pointerEvents: 'none' }}>
+                                                        <Text style={{ color: '#a1a1aa', fontSize: 16 }}>First Name</Text>
+                                                        <Text style={{ color: '#dc2626', fontSize: 16 }}> *</Text>
+                                                    </View>
+                                                )}
+                                            </View>
+                                            <View style={{ flex: 1, justifyContent: 'center' }}>
+                                                <TextInput 
+                                                    style={{ backgroundColor: '#ffffff', borderRadius: 12, padding: 12, fontSize: 16, borderWidth: 1, borderColor: '#dbc1ba' }} 
+                                                    value={manualLastName} 
+                                                    onChangeText={setManualLastName} 
+                                                />
+                                                {manualLastName === '' && (
+                                                    <View style={{ position: 'absolute', left: 12, flexDirection: 'row', pointerEvents: 'none' }}>
+                                                        <Text style={{ color: '#a1a1aa', fontSize: 16 }}>Last Name</Text>
+                                                    </View>
+                                                )}
+                                            </View>
+                                        </View>
+                                        <View style={{ flexDirection: 'row', gap: 8 }}>
+                                            <View style={{ flex: 1, justifyContent: 'center' }}>
+                                                <TextInput 
+                                                    style={{ backgroundColor: '#ffffff', borderRadius: 12, padding: 12, fontSize: 16, borderWidth: 1, borderColor: '#dbc1ba' }} 
+                                                    keyboardType="phone-pad"
+                                                    value={manualPhone} 
+                                                    onChangeText={setManualPhone} 
+                                                />
+                                                {manualPhone === '' && (
+                                                    <View style={{ position: 'absolute', left: 12, flexDirection: 'row', pointerEvents: 'none' }}>
+                                                        <Text style={{ color: '#a1a1aa', fontSize: 16 }}>Phone Number</Text>
+                                                    </View>
+                                                )}
+                                            </View>
+                                            <TouchableOpacity 
+                                                style={{ backgroundColor: manualFirstName ? '#85341f' : '#dbc1ba', borderRadius: 12, paddingHorizontal: 20, justifyContent: 'center', alignItems: 'center' }}
+                                                disabled={!manualFirstName}
+                                                onPress={() => {
+                                                    const newId = `manual_${Date.now()}`;
+                                                    const newContact: User = {
+                                                        id: newId,
+                                                        name: `${manualFirstName} ${manualLastName}`.trim(),
+                                                        initials: `${manualFirstName.charAt(0)}${manualLastName ? manualLastName.charAt(0) : ''}`.toUpperCase(),
+                                                        phoneNumber: manualPhone || undefined
+                                                    };
+                                                    setContacts([newContact, ...contacts]);
+                                                    toggleUser(newContact);
+                                                    setManualFirstName('');
+                                                    setManualLastName('');
+                                                    setManualPhone('');
+                                                    setIsNewContactExpanded(false);
+                                                }}
+                                            >
+                                                <Text style={{ color: 'white', fontWeight: 'bold' }}>Add</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    </>
+                                )}
+                            </View>
+                            <View style={{ padding: 16, paddingBottom: 8 }}>
+                                <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#1c1c19', marginBottom: 12 }}>Select Contact</Text>
                                 <TextInput style={{ backgroundColor: '#ffffff', borderRadius: 12, padding: 12, fontSize: 16, borderWidth: 1, borderColor: '#dbc1ba' }} placeholder="Search contacts" value={searchQuery} onChangeText={setSearchQuery} />
                             </View>
                             <FlatList

@@ -1,10 +1,10 @@
 import { BillItem } from "../types";
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImageManipulator from 'expo-image-manipulator';
-export const mockProcessBill = async (imageUri: string): Promise<{ items: BillItem[], tax: number, serviceCharge: number, tip: number, restaurantName?: string }> => {
+export const mockProcessBill = async (imageUri: string): Promise<{ items: BillItem[], tax: number, serviceCharge: number, tip: number, discount: number, subtotal: number, restaurantName?: string }> => {
     return processWithGemini(imageUri);
 };
-const processWithGemini = async (imageUri: string, isRetry = false): Promise<{ items: BillItem[], tax: number, serviceCharge: number, tip: number, restaurantName?: string }> => {
+const processWithGemini = async (imageUri: string, isRetry = false): Promise<{ items: BillItem[], tax: number, serviceCharge: number, tip: number, discount: number, subtotal: number, restaurantName?: string }> => {
     try {
         const manipResult = await ImageManipulator.manipulateAsync(
             imageUri,
@@ -52,6 +52,8 @@ const processWithGemini = async (imageUri: string, isRetry = false): Promise<{ i
             tax: typeof parsedData.tax === 'number' ? parsedData.tax : parseFloat(parsedData.tax) || 0,
             serviceCharge: typeof parsedData.serviceCharge === 'number' ? parsedData.serviceCharge : parseFloat(parsedData.serviceCharge) || 0,
             tip: typeof parsedData.tip === 'number' ? parsedData.tip : parseFloat(parsedData.tip) || 0,
+            discount: typeof parsedData.discount === 'number' ? Math.abs(parsedData.discount) : (parseFloat(parsedData.discount) ? Math.abs(parseFloat(parsedData.discount)) : 0),
+            subtotal: typeof parsedData.subtotal === 'number' ? parsedData.subtotal : parseFloat(parsedData.subtotal) || 0,
             restaurantName: parsedData.restaurantName || undefined
         };
 
