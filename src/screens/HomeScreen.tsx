@@ -28,16 +28,15 @@ export default function HomeScreen({ navigation }: any) {
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             <StatusBar style={isDark ? 'light' : 'dark'} />
-            
+
             <View style={styles.content}>
                 {/* Centered Logo & Theme Toggle */}
                 <SafeAreaView edges={['top']} style={styles.header}>
                     <View style={styles.headerSpacer} />
                     <View style={styles.logoContainer}>
                         <OutlinedText 
-                            style={[styles.logoText, { color: colors.primary }]}
-                            outlineColor={isDark ? "rgba(255,255,255,0.7)" : "transparent"}
-                            strokeWidth={1.2}
+                            style={[styles.logoText, { color: isDark ? 'white' : colors.primary }]}
+                            outlineColor="transparent"
                             numberOfLines={1}
                             adjustsFontSizeToFit
                         >
@@ -45,9 +44,9 @@ export default function HomeScreen({ navigation }: any) {
                         </OutlinedText>
                     </View>
                     <View style={styles.toggleContainer}>
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             onPress={toggleTheme}
-                            style={[styles.toggleButton, { 
+                            style={[styles.toggleButton, {
                                 backgroundColor: colors.surfaceContainerLow,
                                 borderColor: colors.outlineVariant + '4D',
                             }]}
@@ -64,8 +63,8 @@ export default function HomeScreen({ navigation }: any) {
                 {/* Hero Section: Full Width Fade */}
                 <View style={styles.heroWrapper}>
                     <View style={{ width: width, height: width * 1.05 }}>
-                        <Image 
-                            source={require('../../assets/dining-hero.jpg')} 
+                        <Image
+                            source={require('../../assets/dining-hero.jpg')}
                             style={styles.heroImage}
                         />
                         {/* Top-down fade for logo visibility */}
@@ -99,9 +98,9 @@ export default function HomeScreen({ navigation }: any) {
                     <Text style={[styles.headlineText, { color: colors.onSurface }]}>
                         Pass the plate,
                     </Text>
-                    <OutlinedText 
-                        style={[styles.headlineText, styles.headlineItalic, { color: colors.primary }]}
-                        outlineColor={isDark ? "rgba(255,255,255,0.6)" : "transparent"}
+                    <OutlinedText
+                        style={[styles.headlineText, styles.headlineItalic, { color: isDark ? 'white' : colors.primary }]}
+                        outlineColor="transparent"
                         strokeWidth={1}
                     >
                         not the bill.
@@ -113,7 +112,7 @@ export default function HomeScreen({ navigation }: any) {
 
                 {/* Primary Actions */}
                 <View style={styles.actionsContainer}>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         style={[styles.primaryButton, { backgroundColor: colors.primary }]}
                         onPress={() => navigation.navigate("Camera")}
                         activeOpacity={0.8}
@@ -124,8 +123,8 @@ export default function HomeScreen({ navigation }: any) {
                         </Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity 
-                        style={[styles.secondaryButton, { 
+                    <TouchableOpacity
+                        style={[styles.secondaryButton, {
                             backgroundColor: colors.surfaceContainerLow,
                             borderColor: colors.outlineVariant + '66',
                         }]}
