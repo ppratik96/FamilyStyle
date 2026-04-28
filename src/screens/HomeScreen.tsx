@@ -52,7 +52,7 @@ export default function HomeScreen({ navigation }: any) {
                             }]}
                         >
                             {isDark ? (
-                                <Sun size={20} color={colors.primary} />
+                                <Sun size={20} color={colors.onSurfaceVariant} />
                             ) : (
                                 <Moon size={20} color={colors.primary} />
                             )}
