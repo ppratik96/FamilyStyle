@@ -9,6 +9,8 @@ import { mockProcessBill } from '../services/ocrService';
 import { BillItem } from '../types';
 import { NavigationContext, NavigationRouteContext } from '@react-navigation/native';
 import ReceiptViewer from '../components/ReceiptViewer';
+import { useTheme } from '../ThemeContext';
+import { OutlinedText } from '../components/OutlinedText';
 
 // Use the loaded font names from App.tsx (expo-google-fonts)
 const NEWSREADER_BOLD = 'Newsreader_700Bold';
@@ -18,6 +20,7 @@ const NEWSREADER_REGULAR = 'Newsreader_400Regular';
 export default function BillConfirmationScreen({ navigation, route }: any) {
     const { imageUri } = route.params;
     const insets = useSafeAreaInsets();
+    const { colors, isDark } = useTheme();
     const [loading, setLoading] = useState(true);
     const [items, setItems] = useState<BillItem[]>([]);
     const [tax, setTax] = useState(0);
@@ -116,29 +119,29 @@ export default function BillConfirmationScreen({ navigation, route }: any) {
     return (
         <NavigationContext.Provider value={navigation}>
             <NavigationRouteContext.Provider value={route}>
-                <View style={{ flex: 1, backgroundColor: '#fcf9f4' }}>
+                <View style={{ flex: 1, backgroundColor: colors.background }}>
                     <View style={{ flex: 1 }}>
-                        <StatusBar style="dark" />
+                        <StatusBar style={isDark ? 'light' : 'dark'} />
                         <View style={{ paddingTop: insets.top, flex: 1 }}>
                             {/* Header */}
-                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#fcf9f4', zIndex: 10, width: '100%' }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingVertical: 12, backgroundColor: colors.background, zIndex: 10, width: '100%' }}>
                     <TouchableOpacity 
                         onPress={() => navigation.goBack()} 
-                        className="w-11 h-11 items-center justify-center rounded-full active:scale-95 bg-white shadow-sm border border-outline-variant/30"
+                        style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 22, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.outlineVariant + '4D' }}
                         activeOpacity={0.7}
                     >
-                        <ArrowLeft size={24} color="#85341f" />
+                        <ArrowLeft size={24} color={colors.primary} />
                     </TouchableOpacity>
-                    <Text className="italic font-bold text-primary font-headline-italic" style={{ fontSize: 22 }}>Review Bill</Text>
-                    <View style={{ width: 44 }} className="items-end justify-center">
+                    <Text style={{ fontFamily: NEWSREADER_ITALIC_BOLD, fontSize: 22, color: isDark ? 'white' : colors.primary, fontStyle: 'italic' }}>Review Bill</Text>
+                    <View style={{ width: 44, alignItems: 'flex-end', justifyContent: 'center' }}>
                         <ReceiptViewer imageUri={imageUri} />
                     </View>
                 </View>
 
                 {loading ? (
-                    <View className="flex-1 justify-center items-center">
-                        <ActivityIndicator size="large" color="#85341f" />
-                        <Text className="text-primary mt-6 font-headline text-2xl">Scanning Receipt...</Text>
+                    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                        <ActivityIndicator size="large" color={colors.primary} />
+                        <Text style={{ color: isDark ? 'white' : colors.primary, marginTop: 24, fontFamily: NEWSREADER_BOLD, fontSize: 24 }}>Scanning Receipt...</Text>
                     </View>
                 ) : (
                     <KeyboardAvoidingView
@@ -146,14 +149,14 @@ export default function BillConfirmationScreen({ navigation, route }: any) {
                         style={{ flex: 1 }}
                         keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
                     >
-                        <View className="flex-1 p-6">
-                            <View className="flex-1 bg-white rounded-3xl shadow-sm border border-outline-variant/20 overflow-hidden">
-                                <View className="pt-6 pb-2 items-center">
-                                    <Text className="font-body-bold text-[10px] uppercase tracking-[0.2em] text-on-surface/40">Tap items to edit</Text>
+                        <View style={{ flex: 1, padding: 24 }}>
+                            <View style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 24, borderWidth: 1, borderColor: colors.outlineVariant + '33', overflow: 'hidden' }}>
+                                <View style={{ paddingTop: 24, paddingBottom: 8, alignItems: 'center' }}>
+                                    <Text style={{ fontWeight: '700', fontSize: 10, textTransform: 'uppercase', letterSpacing: 2, color: colors.muted }}>Tap items to edit</Text>
                                 </View>
 
                                 <ScrollView 
-                                    className="flex-1 px-5" 
+                                    style={{ flex: 1, paddingHorizontal: 20 }}
                                     showsVerticalScrollIndicator={false}
                                     contentContainerStyle={{ paddingBottom: 20 }}
                                     keyboardShouldPersistTaps="handled"
@@ -163,43 +166,56 @@ export default function BillConfirmationScreen({ navigation, route }: any) {
                                         return (
                                         <View
                                             key={item.id}
-                                            className={`flex-row justify-between items-center border-outline-variant/10 ${(index === items.length - 1 || item.isGroup) ? 'border-b-0' : 'border-b'} ${item.isGroup ? 'pt-6 pb-1' : 'py-4'} ${isChild ? 'pl-6' : ''}`}
+                                            style={{
+                                                flexDirection: 'row',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                borderBottomWidth: (index === items.length - 1 || item.isGroup) ? 0 : 1,
+                                                borderBottomColor: colors.outlineVariant + (isDark ? '40' : '1A'),
+                                                paddingTop: item.isGroup ? 24 : 16,
+                                                paddingBottom: item.isGroup ? 4 : 16,
+                                                paddingLeft: isChild ? 24 : 0,
+                                            }}
                                         >
-                                            <View className={`flex-1 mr-4 flex-row items-center`}>
+                                            <View style={{ flex: 1, marginRight: 16, flexDirection: 'row', alignItems: 'center' }}>
                                                 {isChild && (
-                                                    <View className="mr-2 opacity-40" style={{ transform: [{ translateY: -1 }] }}>
-                                                        <CornerDownRight size={18} color="#85341f" />
+                                                    <View style={{ marginRight: 8, opacity: 0.4, transform: [{ translateY: -1 }] }}>
+                                                        <CornerDownRight size={18} color={colors.muted} />
                                                     </View>
                                                 )}
                                                 <TextInput
                                                     value={item.name}
                                                     onChangeText={(text) => updateItem(item.id, 'name', text)}
-                                                    className={`text-on-surface text-base flex-1 ${item.isGroup ? 'italic' : ''}`}
-                                                    style={{ fontWeight: '700', paddingVertical: 4 }}
+                                                    style={{ 
+                                                        color: colors.onSurface, 
+                                                        fontSize: 16, 
+                                                        flex: 1, 
+                                                        fontWeight: '700', 
+                                                        fontStyle: item.isGroup ? 'italic' : 'normal',
+                                                        paddingVertical: 4 
+                                                    }}
                                                     multiline={true}
                                                     blurOnSubmit={true}
                                                     editable={!item.isGroup}
                                                 />
                                             </View>
                                             {item.isGroup ? (
-                                                <View className="flex-row items-center bg-transparent rounded-xl px-2 h-9 border border-transparent">
-                                                    <Text className="text-primary/60 mr-1 font-body font-bold" style={{ fontSize: 14, transform: [{ translateY: 1.5 }] }}>$</Text>
+                                                <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, height: 36 }}>
+                                                    <Text style={{ color: isDark ? 'white' : colors.primary, marginRight: 4, fontWeight: '700', fontSize: 14 }}>$</Text>
                                                     <TextInput
                                                         value={item.price.toString()}
                                                         editable={false}
-                                                        className="text-on-surface text-base w-12 text-right font-body font-bold"
-                                                        style={{ padding: 0, transform: [{ translateY: -2.0 }] }}
+                                                        style={{ color: colors.onSurface, fontSize: 16, width: 48, textAlign: 'right', fontWeight: '700', padding: 0 }}
                                                     />
                                                 </View>
                                             ) : (
-                                                <View className="flex-row items-center bg-white rounded-xl px-2 h-9 border border-outline-variant/20 shadow-sm">
-                                                    <Text className="text-primary/60 mr-1 font-body font-bold" style={{ fontSize: 14, transform: [{ translateY: 1.5 }] }}>$</Text>
+                                                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? '#4a3b38' : colors.surface, borderRadius: 12, paddingHorizontal: 8, height: 36, borderWidth: 1, borderColor: colors.outlineVariant + '33' }}>
+                                                    <Text style={{ color: isDark ? 'white' : colors.primary, marginRight: 4, fontWeight: '700', fontSize: 14 }}>$</Text>
                                                     <TextInput
                                                         value={item.price.toString()}
                                                         onChangeText={(text) => updateItem(item.id, 'price', text)}
                                                         keyboardType="numeric"
-                                                        className="text-on-surface text-base w-12 text-right font-body font-bold"
-                                                        style={{ padding: 0, transform: [{ translateY: -2.0 }] }}
+                                                        style={{ color: colors.onSurface, fontSize: 16, width: 48, textAlign: 'right', fontWeight: '700', padding: 0 }}
                                                     />
                                                 </View>
                                             )}
@@ -208,89 +224,89 @@ export default function BillConfirmationScreen({ navigation, route }: any) {
                                     })}
 
                                     {/* Totals Section */}
-                                    <View className="bg-primary/[0.03] p-6 mt-8 rounded-3xl border border-outline-variant/40">
-                                        <View className="flex-row justify-between items-center mb-6">
-                                            <Text className="text-on-surface/60 text-lg font-body font-bold">Subtotal</Text>
-                                            <View className="flex-row items-baseline">
-                                                <Text className="text-primary/60 font-body font-bold text-3xl mr-1">$</Text>
-                                                <Text className="text-on-surface text-3xl font-body font-bold">
+                                    <View style={{ backgroundColor: colors.primary + '08', padding: 24, marginTop: 32, borderRadius: 24, borderWidth: 1, borderColor: colors.outlineVariant + '66' }}>
+                                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                                            <Text style={{ color: colors.onSurface + '99', fontSize: 18, fontWeight: '700' }}>Subtotal</Text>
+                                            <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+                                                <Text style={{ color: isDark ? 'white' : colors.primary, fontWeight: '700', fontSize: 30, marginRight: 4, transform: [{ translateY: -1 }] }}>$</Text>
+                                                <Text style={{ color: colors.onSurface, fontSize: 30, fontWeight: '700' }}>
                                                     {subtotal.toFixed(2)}
                                                 </Text>
                                             </View>
                                         </View>
                                         {expectedSubtotal > 0 && Math.abs(subtotal - expectedSubtotal) > 0.05 && (
-                                            <View className="bg-red-50 p-3 rounded-xl mb-6 border border-red-100 flex-row items-center">
-                                                <Text className="text-red-800 text-xs font-medium flex-1">
+                                            <View style={{ backgroundColor: colors.errorBg, padding: 12, borderRadius: 12, marginBottom: 24, borderWidth: 1, borderColor: colors.errorBorder, flexDirection: 'row', alignItems: 'center' }}>
+                                                <Text style={{ color: colors.error, fontSize: 12, fontWeight: '500', flex: 1 }}>
                                                     Heads up! The sum of items (${subtotal.toFixed(2)}) doesn't match the receipt subtotal (${expectedSubtotal.toFixed(2)}). Please add missing items or check prices above.
                                                 </Text>
                                             </View>
                                         )}
 
-                                        <View className="space-y-4">
-                                            <View className="flex-row justify-between items-center mb-4">
-                                                <Text className="text-on-surface/60 text-base font-body font-bold">Discount</Text>
-                                                <View className="flex-row items-center bg-white rounded-xl px-2 h-9 border border-outline-variant/20 shadow-sm">
-                                                    <Text className="text-green-700 font-body font-bold mr-0.5 text-base" style={{ transform: [{ translateY: 1.5 }] }}>-</Text>
-                                                    <Text className="text-primary/40 mr-1 font-body font-bold" style={{ fontSize: 14, transform: [{ translateY: 1.5 }] }}>$</Text>
+                                        <View>
+                                            {/* Discount */}
+                                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                                                <Text style={{ color: colors.onSurface + '99', fontSize: 16, fontWeight: '700' }}>Discount</Text>
+                                                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? '#4a3b38' : colors.surface, borderRadius: 12, paddingHorizontal: 8, height: 36, borderWidth: 1, borderColor: colors.outlineVariant + '33' }}>
+                                                    <Text style={{ color: colors.success, fontWeight: '700', marginRight: 2, fontSize: 16, transform: [{ translateY: 3 }] }}>-</Text>
+                                                    <Text style={{ color: isDark ? 'white' : colors.primary, marginRight: 4, fontWeight: '700', fontSize: 14, transform: [{ translateY: 3 }] }}>$</Text>
                                                     <TextInput
                                                         value={discount.toString()}
-                                                        onChangeText={(text) => setDiscount(parseFloat(text) || 0)}
-                                                        keyboardType="numeric"
-                                                        className="text-on-surface text-base w-14 text-right font-body font-bold text-green-700"
-                                                        style={{ padding: 0, transform: [{ translateY: -2.0 }] }}
+                                                        onChangeText={setDiscount}
+                                                        keyboardType="decimal-pad"
+                                                        style={{ color: colors.success, fontSize: 16, width: 56, textAlign: 'right', fontWeight: '700', padding: 0 }}
                                                     />
                                                 </View>
                                             </View>
 
-                                            <View className="flex-row justify-between items-center mb-4">
-                                                <Text className="text-on-surface/60 text-base font-body font-bold">Taxes & Fees</Text>
-                                                <View className="flex-row items-center bg-white rounded-xl px-2 h-9 border border-outline-variant/20 shadow-sm">
-                                                    <Text className="text-primary/40 mr-1 font-body font-bold" style={{ fontSize: 14, transform: [{ translateY: 1.5 }] }}>$</Text>
+                                            {/* Taxes & Fees */}
+                                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                                                <Text style={{ color: colors.onSurface + '99', fontSize: 16, fontWeight: '700' }}>Taxes & Fees</Text>
+                                                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? '#4a3b38' : colors.surface, borderRadius: 12, paddingHorizontal: 8, height: 36, borderWidth: 1, borderColor: colors.outlineVariant + '33' }}>
+                                                    <Text style={{ color: isDark ? 'white' : colors.primary, marginRight: 4, fontWeight: '700', fontSize: 14, transform: [{ translateY: 3 }] }}>$</Text>
                                                     <TextInput
                                                         value={tax.toString()}
-                                                        onChangeText={(text) => setTax(parseFloat(text) || 0)}
-                                                        keyboardType="numeric"
-                                                        className="text-on-surface text-base w-14 text-right font-body font-bold"
-                                                        style={{ padding: 0, transform: [{ translateY: -2.0 }] }}
+                                                        onChangeText={setTax}
+                                                        keyboardType="decimal-pad"
+                                                        style={{ color: colors.onSurface, fontSize: 16, width: 56, textAlign: 'right', fontWeight: '700', padding: 0 }}
                                                     />
                                                 </View>
                                             </View>
 
-                                            <View className="flex-row justify-between items-center mb-4">
-                                                <Text className="text-on-surface/60 text-base font-body font-bold">Service Charge</Text>
-                                                <View className="flex-row items-center bg-white rounded-xl px-2 h-9 border border-outline-variant/20 shadow-sm">
-                                                    <Text className="text-primary/40 mr-1 font-body font-bold" style={{ fontSize: 14, transform: [{ translateY: 1.5 }] }}>$</Text>
+                                            {/* Service Charge */}
+                                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                                                <Text style={{ color: colors.onSurface + '99', fontSize: 16, fontWeight: '700' }}>Service Charge</Text>
+                                                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? '#4a3b38' : colors.surface, borderRadius: 12, paddingHorizontal: 8, height: 36, borderWidth: 1, borderColor: colors.outlineVariant + '33' }}>
+                                                    <Text style={{ color: isDark ? 'white' : colors.primary, marginRight: 4, fontWeight: '700', fontSize: 14, transform: [{ translateY: 3 }] }}>$</Text>
                                                     <TextInput
                                                         value={serviceCharge.toString()}
-                                                        onChangeText={(text) => setServiceCharge(parseFloat(text) || 0)}
-                                                        keyboardType="numeric"
-                                                        className="text-on-surface text-base w-14 text-right font-body font-bold"
-                                                        style={{ padding: 0, transform: [{ translateY: -2.0 }] }}
+                                                        onChangeText={setServiceCharge}
+                                                        keyboardType="decimal-pad"
+                                                        style={{ color: colors.onSurface, fontSize: 16, width: 56, textAlign: 'right', fontWeight: '700', padding: 0 }}
                                                     />
                                                 </View>
                                             </View>
 
-                                            <View className="flex-row justify-between items-center mb-4">
-                                                <Text className="text-on-surface/60 text-base font-body font-bold">Tip</Text>
-                                                <View className="flex-row items-center bg-white rounded-xl px-2 h-9 border border-outline-variant/20 shadow-sm">
-                                                    <Text className="text-primary/40 mr-1 font-body font-bold" style={{ fontSize: 14, transform: [{ translateY: 1.5 }] }}>$</Text>
+                                            {/* Tip */}
+                                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                                                <Text style={{ color: colors.onSurface + '99', fontSize: 16, fontWeight: '700' }}>Tip</Text>
+                                                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? '#4a3b38' : colors.surface, borderRadius: 12, paddingHorizontal: 8, height: 36, borderWidth: 1, borderColor: colors.outlineVariant + '33' }}>
+                                                    <Text style={{ color: isDark ? 'white' : colors.primary, marginRight: 4, fontWeight: '700', fontSize: 14, transform: [{ translateY: 3 }] }}>$</Text>
                                                     <TextInput
                                                         value={tip.toString()}
-                                                        onChangeText={(text) => setTip(parseFloat(text) || 0)}
-                                                        keyboardType="numeric"
-                                                        className="text-on-surface text-base w-14 text-right font-body font-bold"
-                                                        style={{ padding: 0, transform: [{ translateY: -2.0 }] }}
+                                                        onChangeText={setTip}
+                                                        keyboardType="decimal-pad"
+                                                        style={{ color: colors.onSurface, fontSize: 16, width: 56, textAlign: 'right', fontWeight: '700', padding: 0 }}
                                                     />
                                                 </View>
                                             </View>
 
-                                            <View className="h-[1px] bg-outline-variant/30 w-full mb-4" />
+                                            <View style={{ height: 1, backgroundColor: colors.outlineVariant + '4D', width: '100%', marginBottom: 16 }} />
 
-                                            <View className="flex-row justify-between items-center">
-                                                <Text className="text-on-surface text-lg font-body font-bold">Total</Text>
-                                                <View className="flex-row items-baseline">
-                                                    <Text className="text-primary/60 font-body font-bold text-xl mr-1">$</Text>
-                                                    <Text className="text-on-surface text-xl font-body font-bold">
+                                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <Text style={{ color: colors.onSurface, fontSize: 18, fontWeight: '700' }}>Total</Text>
+                                                <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+                                                    <Text style={{ color: isDark ? 'white' : colors.primary, fontWeight: '700', fontSize: 20, marginRight: 4, transform: [{ translateY: -1 }] }}>$</Text>
+                                                    <Text style={{ color: colors.onSurface, fontSize: 20, fontWeight: '700' }}>
                                                         {Math.max(0, subtotal - discount + tax + serviceCharge + tip).toFixed(2)}
                                                     </Text>
                                                 </View>
@@ -302,14 +318,14 @@ export default function BillConfirmationScreen({ navigation, route }: any) {
                         </View>
 
                         {/* Bottom Action */}
-                        <View className="px-6 pb-10 pt-2">
+                        <View style={{ paddingHorizontal: 24, paddingBottom: 40, paddingTop: 8 }}>
                             <TouchableOpacity
-                                className="bg-primary py-5 rounded-3xl flex-row justify-center items-center shadow-lg active:scale-95"
+                                style={{ backgroundColor: colors.primary, paddingVertical: 20, borderRadius: 24, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}
                                 onPress={() => navigation.navigate('Splitting', { items, tax, serviceCharge, tip, discount, expectedSubtotal, imageUri, restaurantName })}
                                 activeOpacity={0.9}
                             >
-                                <Text className="text-white text-xl font-body-bold mr-3">Start Splitting</Text>
-                                <Check size={22} color="white" strokeWidth={3} />
+                                <Text style={{ color: colors.onPrimary, fontSize: 20, fontWeight: '700', marginRight: 12 }}>Start Splitting</Text>
+                                <Check size={22} color={colors.onPrimary} strokeWidth={3} />
                             </TouchableOpacity>
                         </View>
                     </KeyboardAvoidingView>

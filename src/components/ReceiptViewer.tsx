@@ -4,6 +4,7 @@ import { X, ZoomIn } from 'lucide-react-native';
 import Animated, { FadeIn, FadeInDown, FadeOut } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../ThemeContext';
 
 interface ReceiptViewerProps {
     imageUri: string;
@@ -15,6 +16,7 @@ const { width, height } = Dimensions.get('window');
 export default function ReceiptViewer({ imageUri, topOffset = 10 }: ReceiptViewerProps) {
     const [modalVisible, setModalVisible] = useState(false);
     const insets = useSafeAreaInsets();
+    const { colors, isDark } = useTheme();
 
     if (!imageUri) return null;
 
@@ -24,8 +26,8 @@ export default function ReceiptViewer({ imageUri, topOffset = 10 }: ReceiptViewe
             <View>
                 <TouchableOpacity
                     onPress={() => setModalVisible(true)}
-                    className="overflow-hidden rounded-md border-2 border-[#E5CDC1] bg-white shadow-sm"
-                    style={{ width: 44, height: 56 }}
+                    className="overflow-hidden rounded-md border-2 shadow-sm"
+                    style={{ width: 44, height: 56, borderColor: colors.outlineVariant, backgroundColor: colors.surface }}
                 >
                     <Image
                         source={{ uri: imageUri }}
@@ -45,17 +47,17 @@ export default function ReceiptViewer({ imageUri, topOffset = 10 }: ReceiptViewe
                 visible={modalVisible}
                 onRequestClose={() => setModalVisible(false)}
             >
-                <View className="flex-1 bg-white/80">
-                    <BlurView intensity={40} tint="light" className="flex-1 justify-center items-center">
+                <View className="flex-1" style={{ backgroundColor: isDark ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.8)' }}>
+                    <BlurView intensity={40} tint={isDark ? "dark" : "light"} className="flex-1 justify-center items-center">
                         <TouchableOpacity
-                            style={{ position: 'absolute', top: insets.top + 20, right: 20, zIndex: 100 }}
+                            style={{ position: 'absolute', top: insets.top + 20, right: 20, zIndex: 100, backgroundColor: colors.surface, borderColor: colors.outlineVariant }}
                             onPress={() => setModalVisible(false)}
-                            className="bg-white p-3 border border-[#E5CDC1] shadow-md rounded-full"
+                            className="p-3 border shadow-md rounded-full"
                         >
-                            <X size={24} color="#A64932" />
+                            <X size={24} color={isDark ? 'white' : colors.primary} />
                         </TouchableOpacity>
 
-                        <View className="bg-white rounded-2xl shadow-xl overflow-hidden border border-[#E5CDC1]" style={{ width: width * 0.9, height: height * 0.75 }}>
+                        <View className="rounded-2xl shadow-xl overflow-hidden border" style={{ width: width * 0.9, height: height * 0.75, backgroundColor: colors.surface, borderColor: colors.outlineVariant }}>
                             <Image
                                 source={{ uri: imageUri }}
                                 className="w-full h-full"

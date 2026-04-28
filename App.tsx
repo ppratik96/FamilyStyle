@@ -14,6 +14,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
+import { ThemeProvider } from './src/ThemeContext';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -39,19 +40,21 @@ export default function App() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <NavigationContainer>
-          <Stack.Navigator screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="Home" component={HomeScreen} />
-            <Stack.Screen name="Camera" component={CameraScreen} />
-            <Stack.Screen name="BillConfirmation" component={BillConfirmationScreen} />
-            <Stack.Screen name="Splitting" component={SplittingScreen} />
-            <Stack.Screen name="Result" component={ResultScreen} />
-          </Stack.Navigator>
-          <StatusBar style="dark" />
-        </NavigationContainer>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+    <ThemeProvider>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaProvider>
+          <NavigationContainer>
+            <Stack.Navigator screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="Home" component={HomeScreen} />
+              <Stack.Screen name="Camera" component={CameraScreen} />
+              <Stack.Screen name="BillConfirmation" component={BillConfirmationScreen} />
+              <Stack.Screen name="Splitting" component={SplittingScreen} />
+              <Stack.Screen name="Result" component={ResultScreen} />
+            </Stack.Navigator>
+            <StatusBar style="dark" />
+          </NavigationContainer>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    </ThemeProvider>
   );
 }

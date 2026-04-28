@@ -8,7 +8,8 @@ import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BillItem, User } from '../types';
 import { getContacts, getContactFrequencies, incrementContactFrequency } from '../services/contactsService';
-
+import { useTheme } from '../ThemeContext';
+import { OutlinedText } from '../components/OutlinedText';
 import { NavigationContext, NavigationRouteContext } from '@react-navigation/native';
 import ReceiptViewer from '../components/ReceiptViewer';
 
@@ -37,6 +38,7 @@ const getUserColor = (userId: string) => {
 export default function SplittingScreen({ navigation, route }: any) {
     const { items: initialItems, imageUri, restaurantName } = route.params;
     const insets = useSafeAreaInsets();
+    const { colors, isDark } = useTheme();
 
     const [items, setItems] = useState<BillItem[]>(initialItems.filter((i: BillItem) => !i.isGroup));
     const [users, setUsers] = useState<User[]>([{ id: 'me', name: 'Me', initials: 'ME' }]);
@@ -206,15 +208,15 @@ export default function SplittingScreen({ navigation, route }: any) {
     return (
         <NavigationContext.Provider value={navigation}>
             <NavigationRouteContext.Provider value={route}>
-                <View style={{ flex: 1, backgroundColor: '#fcf9f4' }}>
+                <View style={{ flex: 1, backgroundColor: colors.background }}>
                     <View style={{ flex: 1, paddingTop: insets.top }}>
                         
                         {/* Header */}
                         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingVertical: 12 }}>
                             <Pressable onPress={() => navigation.goBack()} style={({ pressed }) => [{ width: 44, opacity: pressed ? 0.5 : 1 }]}>
-                                <ArrowLeft size={22} color="#85341f" />
+                                <ArrowLeft size={22} color={colors.primary} />
                             </Pressable>
-                            <Text style={{ fontFamily: NEWSREADER_ITALIC_BOLD, fontSize: 22, color: '#85341f', fontStyle: 'italic' }}>Split the Tab</Text>
+                            <Text style={{ fontFamily: NEWSREADER_ITALIC_BOLD, fontSize: 22, color: isDark ? 'white' : colors.primary, fontStyle: 'italic' }}>Split the Tab</Text>
                             <View style={{ width: 44, alignItems: 'flex-end' }}>
                                 <ReceiptViewer imageUri={imageUri} />
                             </View>
@@ -222,7 +224,7 @@ export default function SplittingScreen({ navigation, route }: any) {
 
                         {/* Instructional Sub-header */}
                         <View style={{ marginTop: 24, marginBottom: 12, alignItems: 'center', paddingHorizontal: 24 }}>
-                            <Text style={{ fontSize: 9, color: '#aba9a2', letterSpacing: 1.2, fontWeight: '600', textAlign: 'center' }}>
+                            <Text style={{ fontSize: 9, color: colors.muted, letterSpacing: 1.2, fontWeight: '600', textAlign: 'center' }}>
                                 TAP AVATAR TO COVER GUESTS (+1). HOLD TO REMOVE (−1).
                             </Text>
                         </View>
@@ -268,16 +270,16 @@ export default function SplittingScreen({ navigation, route }: any) {
                                                 shadowOpacity: 0.04, 
                                                 shadowRadius: 3
                                             }}>
-                                                <Text style={{ fontWeight: '700', fontSize: 18, color: '#85341f' }}>{user.initials}</Text>
+                                                <Text style={{ fontWeight: '700', fontSize: 18, color: colors.primary }}>{user.initials}</Text>
                                                 {maxShares > 1 && (
-                                                    <View style={{ position: 'absolute', top: -2, left: -2, backgroundColor: '#1c1c19', borderRadius: 10, minWidth: 20, height: 20, justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: '#fcf9f4' }}>
+                                                    <View style={{ position: 'absolute', top: -2, left: -2, backgroundColor: colors.onSurface, borderRadius: 10, minWidth: 20, height: 20, justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: colors.background }}>
                                                         <Text style={{ color: 'white', fontSize: 9, fontWeight: 'bold' }}>x{maxShares}</Text>
                                                     </View>
                                                 )}
                                             </View>
                                             <View className="flex-row items-baseline">
-                                                <Text className="text-primary/60 font-body font-bold text-base mr-0.5">$</Text>
-                                                <Text className="text-primary font-body font-bold text-lg">
+                                                <Text className="font-body font-bold text-base mr-0.5" style={{ color: isDark ? 'white' : colors.primary, transform: [{ translateY: -1 }] }}>$</Text>
+                                                <Text className="font-body font-bold text-lg" style={{ color: isDark ? 'white' : colors.primary }}>
                                                     {getUserTotal(user.id).toFixed(2)}
                                                 </Text>
                                             </View>
@@ -297,14 +299,14 @@ export default function SplittingScreen({ navigation, route }: any) {
                                             width: 52, 
                                             height: 52, 
                                             borderRadius: 26, 
-                                            backgroundColor: '#ffffff', 
-                                            borderColor: '#dbc1ba', 
+                                            backgroundColor: colors.surface, 
+                                            borderColor: colors.outlineVariant, 
                                             borderWidth: 1.2, 
                                             alignItems: 'center', 
                                             justifyContent: 'center', 
                                             marginBottom: 8 
                                         }}>
-                                            <Plus size={24} color="#85341f" />
+                                            <Plus size={24} color={colors.primary} />
                                         </View>
                                         <View style={{ height: 26, justifyContent: 'center' }}>
                                             <Text className="font-bold text-lg text-primary uppercase text-center">ADD</Text>
@@ -337,7 +339,7 @@ export default function SplittingScreen({ navigation, route }: any) {
                                 }}
                                 activeOpacity={0.7}
                             >
-                                <Text style={{ color: '#85341f', fontSize: 11, fontWeight: '800', letterSpacing: 0.5 }}>SPLIT ALL ITEMS EVENLY</Text>
+                                <Text style={{ color: colors.primary, fontSize: 11, fontWeight: '800', letterSpacing: 0.5 }}>SPLIT ALL ITEMS EVENLY</Text>
                             </TouchableOpacity>
                         </View>
                         {/* Item List */}
@@ -356,10 +358,10 @@ export default function SplittingScreen({ navigation, route }: any) {
                                         <View 
                                             className="shadow-sm"
                                             style={{ 
-                                            backgroundColor: '#ffffff', 
+                                            backgroundColor: colors.surface, 
                                             borderRadius: 24,
                                             borderWidth: 1.2, 
-                                            borderColor: 'rgba(219, 193, 186, 0.45)',
+                                            borderColor: colors.outlineVariant + '73',
                                             marginHorizontal: 2, // Slight buffer
                                             paddingHorizontal: 16,
                                             paddingVertical: 14
@@ -375,14 +377,14 @@ export default function SplittingScreen({ navigation, route }: any) {
                                             >
                                                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                                                     <View style={{ flex: 1, paddingRight: 20 }}>
-                                                        <Text style={{ fontWeight: '700', fontSize: 16, color: '#1c1c19', letterSpacing: -0.2, lineHeight: 22 }}>{item.name}</Text>
-                                                        <Text style={{ fontStyle: 'italic', fontSize: 13, color: '#85341f', opacity: 0.5, marginTop: 4 }}>
+                                                        <Text style={{ fontWeight: '700', fontSize: 16, color: colors.onSurface, letterSpacing: -0.2, lineHeight: 22 }}>{item.name}</Text>
+                                                        <Text style={{ fontStyle: 'italic', fontSize: 13, color: isDark ? colors.muted : colors.primary, opacity: isDark ? 1 : 0.5, marginTop: 4 }}>
                                                             {isSplit ? `Split with ${item.assignedTo.length} ${item.assignedTo.length === 1 ? 'person' : 'people'}` : 'Unassigned'}
                                                         </Text>
                                                     </View>
-                                                    <View className="flex-row items-center">
-                                                        <Text className="text-primary/60 font-body font-bold mr-1" style={{ fontSize: 14, transform: [{ translateY: 1.5 }] }}>$</Text>
-                                                        <Text className="text-on-surface font-body font-bold" style={{ fontSize: 16 }}>
+                                                    <View className="flex-row items-baseline">
+                                                        <Text className="font-body font-bold mr-1" style={{ fontSize: 14, color: isDark ? 'white' : colors.primary, transform: [{ translateY: -1 }] }}>$</Text>
+                                                        <Text className="font-body font-bold" style={{ fontSize: 16, color: colors.onSurface }}>
                                                             {item.price.toFixed(2)}
                                                         </Text>
                                                     </View>
@@ -411,7 +413,7 @@ export default function SplittingScreen({ navigation, route }: any) {
                                                                         shadowOpacity: 0.05, 
                                                                         shadowRadius: 3 
                                                                     }}>
-                                                                        <Text style={{ fontWeight: '700', fontSize: 11, color: '#85341f', transform: [{ translateY: 1.0 }] }}>{u?.initials}</Text>
+                                                                        <Text style={{ fontWeight: '700', fontSize: 11, color: colors.primary, transform: [{ translateY: 1.0 }] }}>{u?.initials}</Text>
                                                                         {count > 1 && (
                                                                             <View style={{ position: 'absolute', top: -4, right: -4, backgroundColor: '#1c1c19', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#f6f3ee' }}>
                                                                                 <Text style={{ color: 'white', fontSize: 7, fontWeight: 'bold' }}>{count}</Text>
@@ -436,7 +438,7 @@ export default function SplittingScreen({ navigation, route }: any) {
                         paddingBottom: Math.max(insets.bottom, 20), 
                         paddingTop: 20, 
                         paddingHorizontal: 24, 
-                        backgroundColor: '#fcf9f4', 
+                        backgroundColor: colors.background, 
                         position: 'absolute', 
                         bottom: 0, 
                         width: '100%', 
@@ -469,7 +471,7 @@ export default function SplittingScreen({ navigation, route }: any) {
                         >
                             <View 
                                 style={{ 
-                                    backgroundColor: '#85341f',
+                                    backgroundColor: colors.primary,
                                     paddingVertical: 18, 
                                     borderRadius: 30, 
                                     alignItems: 'center', 
@@ -503,7 +505,7 @@ export default function SplittingScreen({ navigation, route }: any) {
                                 bottom: insets.bottom + 120, 
                                 left: 16, 
                                 right: 16, 
-                                backgroundColor: '#fcf9f4', 
+                                backgroundColor: colors.background, 
                                 borderRadius: 36, 
                                 paddingHorizontal: 20, 
                                 paddingTop: 24,
@@ -517,8 +519,8 @@ export default function SplittingScreen({ navigation, route }: any) {
                                     return (
                                         <>
                                             <View style={{ width: '100%', alignItems: 'center', marginBottom: 30, position: 'relative' }}>
-                                                <Text style={{ fontFamily: NEWSREADER_BOLD, fontSize: 22, color: '#85341f', textAlign: 'center' }}>Assign "{activeItem.name}"</Text>
-                                                <Text style={{ fontSize: 10, color: '#aba9a2', marginTop: 6, fontWeight: '500' }}>Tap to add. Hold to remove.</Text>
+                                                <Text style={{ fontFamily: NEWSREADER_BOLD, fontSize: 22, color: isDark ? 'white' : colors.primary, textAlign: 'center' }}>Assign "{activeItem.name}"</Text>
+                                                <Text style={{ fontSize: 10, color: colors.muted, marginTop: 6, fontWeight: '500' }}>Tap to add. Hold to remove.</Text>
                                                 
                                                 <TouchableOpacity 
                                                     onPress={() => setSelectedItemId(null)} 
@@ -532,7 +534,7 @@ export default function SplittingScreen({ navigation, route }: any) {
                                                         justifyContent: 'flex-start'
                                                     }}
                                                 >
-                                                    <X size={24} color="#1c1c19" strokeWidth={1.5} />
+                                                    <X size={24} color={colors.onSurface} strokeWidth={1.5} />
                                                 </TouchableOpacity>
                                             </View>
                                             
@@ -557,8 +559,8 @@ export default function SplittingScreen({ navigation, route }: any) {
                                                                 width: 50, 
                                                                 height: 50, 
                                                                 borderRadius: 25, 
-                                                                backgroundColor: '#ffffff', 
-                                                                borderColor: '#dbc1ba', 
+                                                                backgroundColor: colors.surface, 
+                                                                borderColor: colors.outlineVariant, 
                                                                 borderWidth: 1.5, 
                                                                 alignItems: 'center', 
                                                                 justifyContent: 'center', 
@@ -567,10 +569,10 @@ export default function SplittingScreen({ navigation, route }: any) {
                                                                 shadowOpacity: 0.1, 
                                                                 shadowRadius: 4
                                                             }}>
-                                                                <Users size={20} color="#85341f" />
+                                                                <Users size={20} color={colors.primary} />
                                                             </View>
                                                         </Pressable>
-                                                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#1c1c19', marginTop: 10, textAlign: 'center', lineHeight: 13 }}>ALL</Text>
+                                                        <Text style={{ fontSize: 11, fontWeight: '700', color: colors.onSurface, marginTop: 10, textAlign: 'center', lineHeight: 13 }}>ALL</Text>
                                                     </View>
                                                     {users.map(user => {
                                                         const shares = activeItem.assignedTo.filter(id => id === user.id).length;
@@ -597,7 +599,7 @@ export default function SplittingScreen({ navigation, route }: any) {
                                                                         shadowOpacity: 0.08, 
                                                                         shadowRadius: 4
                                                                     }}>
-                                                                        <Text style={{ fontWeight: '700', fontSize: 16, color: '#85341f', textAlign: 'center' }}>{user.initials}</Text>
+                                                                        <Text style={{ fontWeight: '700', fontSize: 16, color: colors.primary, textAlign: 'center' }}>{user.initials}</Text>
                                                                         {shares > 1 && (
                                                                             <View style={{ position: 'absolute', top: -4, right: -4, backgroundColor: '#1c1c19', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#fcf9f4' }}>
                                                                                 <Text style={{ color: 'white', fontSize: 7, fontWeight: 'bold' }}>{shares}</Text>
@@ -610,7 +612,7 @@ export default function SplittingScreen({ navigation, route }: any) {
                                                                         )}
                                                                     </View>
                                                                 </Pressable>
-                                                                <Text style={{ fontSize: 11, color: '#1c1c19', marginTop: 10, fontWeight: '600', textAlign: 'center', lineHeight: 13 }} numberOfLines={2}>
+                                                                <Text style={{ fontSize: 11, color: colors.onSurface, marginTop: 10, fontWeight: '600', textAlign: 'center', lineHeight: 13 }} numberOfLines={2}>
                                                                     {user.name}
                                                                 </Text>
                                                             </View>
@@ -627,18 +629,18 @@ export default function SplittingScreen({ navigation, route }: any) {
 
                     {/* Contact Modal */}
                     <Modal visible={isContactModalVisible} animationType="slide" presentationStyle="pageSheet">
-                        <View style={{ flex: 1, backgroundColor: '#fcf9f4' }}>
+                        <View style={{ flex: 1, backgroundColor: colors.background }}>
                             <View style={{ padding: 20, flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' }}>
-                                <TouchableOpacity onPress={() => setContactModalVisible(false)}><Text style={{ color: '#85341f', fontSize: 18, fontWeight: '600' }}>Done</Text></TouchableOpacity>
+                                <TouchableOpacity onPress={() => setContactModalVisible(false)}><Text style={{ color: colors.primary, fontSize: 18, fontWeight: '600' }}>Done</Text></TouchableOpacity>
                             </View>
-                            <View style={{ paddingHorizontal: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#f0ede4' }}>
+                            <View style={{ paddingHorizontal: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.separator }}>
                                 <TouchableOpacity 
                                     style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: isNewContactExpanded ? 16 : 0, paddingVertical: isNewContactExpanded ? 0 : 8 }}
                                     onPress={() => setIsNewContactExpanded(!isNewContactExpanded)}
                                     activeOpacity={0.7}
                                 >
-                                    <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#1c1c19' }}>New Contact</Text>
-                                    {isNewContactExpanded ? <ChevronUp size={24} color="#85341f" /> : <ChevronDown size={24} color="#85341f" />}
+                                    <Text style={{ fontSize: 22, fontWeight: 'bold', color: colors.onSurface }}>New Contact</Text>
+                                    {isNewContactExpanded ? <ChevronUp size={24} color={colors.primary} /> : <ChevronDown size={24} color={colors.primary} />}
                                 </TouchableOpacity>
                                 
                                 {isNewContactExpanded && (
@@ -646,7 +648,7 @@ export default function SplittingScreen({ navigation, route }: any) {
                                         <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
                                             <View style={{ flex: 1, justifyContent: 'center' }}>
                                                 <TextInput 
-                                                    style={{ backgroundColor: '#ffffff', borderRadius: 12, padding: 12, fontSize: 16, borderWidth: 1, borderColor: '#dbc1ba' }} 
+                                                    style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 12, fontSize: 16, color: colors.onSurface, borderWidth: 1, borderColor: colors.outlineVariant }} 
                                                     value={manualFirstName} 
                                                     onChangeText={setManualFirstName} 
                                                 />
@@ -659,7 +661,7 @@ export default function SplittingScreen({ navigation, route }: any) {
                                             </View>
                                             <View style={{ flex: 1, justifyContent: 'center' }}>
                                                 <TextInput 
-                                                    style={{ backgroundColor: '#ffffff', borderRadius: 12, padding: 12, fontSize: 16, borderWidth: 1, borderColor: '#dbc1ba' }} 
+                                                    style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 12, fontSize: 16, color: colors.onSurface, borderWidth: 1, borderColor: colors.outlineVariant }} 
                                                     value={manualLastName} 
                                                     onChangeText={setManualLastName} 
                                                 />
@@ -673,7 +675,7 @@ export default function SplittingScreen({ navigation, route }: any) {
                                         <View style={{ flexDirection: 'row', gap: 8 }}>
                                             <View style={{ flex: 1, justifyContent: 'center' }}>
                                                 <TextInput 
-                                                    style={{ backgroundColor: '#ffffff', borderRadius: 12, padding: 12, fontSize: 16, borderWidth: 1, borderColor: '#dbc1ba' }} 
+                                                    style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 12, fontSize: 16, color: colors.onSurface, borderWidth: 1, borderColor: colors.outlineVariant }} 
                                                     keyboardType="phone-pad"
                                                     value={manualPhone} 
                                                     onChangeText={setManualPhone} 
@@ -685,7 +687,7 @@ export default function SplittingScreen({ navigation, route }: any) {
                                                 )}
                                             </View>
                                             <TouchableOpacity 
-                                                style={{ backgroundColor: manualFirstName ? '#85341f' : '#dbc1ba', borderRadius: 12, paddingHorizontal: 20, justifyContent: 'center', alignItems: 'center' }}
+                                                style={{ backgroundColor: manualFirstName ? colors.primary : colors.outlineVariant, borderRadius: 12, paddingHorizontal: 20, justifyContent: 'center', alignItems: 'center' }}
                                                 disabled={!manualFirstName}
                                                 onPress={() => {
                                                     const newId = `manual_${Date.now()}`;
@@ -710,8 +712,8 @@ export default function SplittingScreen({ navigation, route }: any) {
                                 )}
                             </View>
                             <View style={{ padding: 16, paddingBottom: 8 }}>
-                                <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#1c1c19', marginBottom: 12 }}>Select Contact</Text>
-                                <TextInput style={{ backgroundColor: '#ffffff', borderRadius: 12, padding: 12, fontSize: 16, borderWidth: 1, borderColor: '#dbc1ba' }} placeholder="Search contacts" value={searchQuery} onChangeText={setSearchQuery} />
+                                <Text style={{ fontSize: 22, fontWeight: 'bold', color: colors.onSurface, marginBottom: 12 }}>Select Contact</Text>
+                                <TextInput style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 12, fontSize: 16, color: colors.onSurface, borderWidth: 1, borderColor: colors.outlineVariant }} placeholder="Search contacts" placeholderTextColor={colors.muted} value={searchQuery} onChangeText={setSearchQuery} />
                             </View>
                             <FlatList
                                 data={contacts.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()))}
@@ -720,14 +722,14 @@ export default function SplittingScreen({ navigation, route }: any) {
                                 renderItem={({ item }) => {
                                     const isSelected = users.some(u => u.id === item.id);
                                     return (
-                                        <TouchableOpacity onPress={() => toggleUser(item)} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#f0ede4' }}>
+                                        <TouchableOpacity onPress={() => toggleUser(item)} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: colors.separator }}>
                                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                                <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: isSelected ? '#85341f' : '#f0ede9', alignItems: 'center', justifyContent: 'center', marginRight: 16 }}>
-                                                    <Text style={{ color: isSelected ? 'white' : '#8c8c88', fontWeight: 'bold' }}>{item.initials}</Text>
+                                                <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: isSelected ? colors.primary : colors.surfaceContainerLow, alignItems: 'center', justifyContent: 'center', marginRight: 16 }}>
+                                                    <Text style={{ color: isSelected ? 'white' : colors.muted, fontWeight: 'bold' }}>{item.initials}</Text>
                                                 </View>
-                                                <Text style={{ fontSize: 18, color: '#1c1c19' }}>{item.name}</Text>
+                                                <Text style={{ fontSize: 18, color: colors.onSurface }}>{item.name}</Text>
                                             </View>
-                                            {isSelected && <Check size={20} color="#85341f" />}
+                                            {isSelected && <Check size={20} color={colors.primary} />}
                                         </TouchableOpacity>
                                     );
                                 }}

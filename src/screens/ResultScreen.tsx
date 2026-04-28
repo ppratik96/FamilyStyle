@@ -12,6 +12,8 @@ import { BillItem, User } from '../types';
 import { NavigationContext, NavigationRouteContext } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import ReceiptViewer from '../components/ReceiptViewer';
+import { useTheme } from '../ThemeContext';
+import { OutlinedText } from '../components/OutlinedText';
 
 // Use the loaded font names from App.tsx (expo-google-fonts)
 const NEWSREADER_BOLD = 'Newsreader_700Bold';
@@ -38,6 +40,7 @@ const getUserColor = (userId: string) => {
 export default function ResultScreen({ navigation, route }: any) {
     const { items, users, tax: initialTax = 0, serviceCharge: initialServiceCharge = 0, tip: initialTip = 0, discount: initialDiscount = 0, imageUri, restaurantName } = route.params;
     const insets = useSafeAreaInsets();
+    const { colors, isDark } = useTheme();
 
     const subtotal = items.reduce((sum: number, item: BillItem) => sum + item.price, 0);
 
@@ -48,6 +51,8 @@ export default function ResultScreen({ navigation, route }: any) {
     const [venmoUsername, setVenmoUsername] = useState('');
     const [paymentNote, setPaymentNote] = useState(restaurantName ? `Dinner at ${restaurantName}` : '');
     const [expandedUsers, setExpandedUsers] = useState<Record<string, boolean>>({});
+    const [sentUsers, setSentUsers] = useState<Record<string, boolean>>({});
+    const [hasSharedSummary, setHasSharedSummary] = useState(false);
 
     React.useEffect(() => {
         const loadSettings = async () => {
@@ -104,6 +109,14 @@ export default function ResultScreen({ navigation, route }: any) {
         };
     };
 
+    const buildVenmoUrl = (username: string, amount?: number, note?: string) => {
+        const cleanUsername = username.trim().replace('@', '');
+        const params = [`txn=pay`, `recipients=${cleanUsername}`];
+        if (amount !== undefined) params.push(`amount=${amount.toFixed(2)}`);
+        if (note) params.push(`note=${encodeURIComponent(note.replace(/ /g, '\u00A0'))}`);
+        return `https://venmo.com/?${params.join('&')}`;
+    };
+
     const generateSummary = () => {
         const note = paymentNote.trim() || 'Bill Summary';
         let summary = `🍽️ ${note}\n\n`;
@@ -117,7 +130,7 @@ export default function ResultScreen({ navigation, route }: any) {
         
         if (venmoUsername.trim()) {
             const cleanUsername = venmoUsername.trim().replace('@', '');
-            summary += `\nPay via Venmo: https://venmo.com/${cleanUsername}`;
+            summary += `\nPay via Venmo (@${cleanUsername}): ${buildVenmoUrl(venmoUsername)}`;
         }
         
         return summary;
@@ -128,6 +141,7 @@ export default function ResultScreen({ navigation, route }: any) {
             await Share.share({
                 message: generateSummary(),
             });
+            setHasSharedSummary(true);
         } catch (error) {
             Alert.alert('Error', 'Could not share summary');
         }
@@ -147,12 +161,14 @@ export default function ResultScreen({ navigation, route }: any) {
             
             if (venmoUsername.trim()) {
                 const cleanUsername = venmoUsername.trim().replace('@', '');
-                message += ` You can venmo me here https://venmo.com/${cleanUsername}?txn=pay&amount=${amount.toFixed(2)}&note=${encodeURIComponent(note)}`;
+                message += ` You can venmo me (@${cleanUsername}) here: ${buildVenmoUrl(venmoUsername, amount, note)}`;
             }
             
             await SMS.sendSMSAsync(recipients, message);
+            setSentUsers(prev => ({ ...prev, [user.id]: true }));
         } else {
             Alert.alert('Error', 'SMS is not available on this device');
+            setSentUsers(prev => ({ ...prev, [user.id]: true }));
         }
     };
 
@@ -179,32 +195,39 @@ export default function ResultScreen({ navigation, route }: any) {
             
             if (venmoUsername.trim()) {
                 const cleanUsername = venmoUsername.trim().replace('@', '');
-                message += `\nYou can venmo me here https://venmo.com/${cleanUsername}?txn=pay&amount=${totals.total.toFixed(2)}&note=${encodeURIComponent(note)}`;
+                message += `\nYou can venmo me (@${cleanUsername}) here: ${buildVenmoUrl(venmoUsername, totals.total, note)}`;
             }
             
             await SMS.sendSMSAsync(recipients, message);
+            setSentUsers(prev => ({ ...prev, [user.id]: true }));
         } else {
             Alert.alert('Error', 'SMS is not available on this device');
+            setSentUsers(prev => ({ ...prev, [user.id]: true }));
         }
     };
+
+    const payableUsers = users.filter((u: User) => u.id !== 'me' && calculateUserTotal(u.id).total > 0);
+    const isAllSent = payableUsers.length > 0 && payableUsers.every(u => sentUsers[u.id]);
+    const isReadyToFinish = hasSharedSummary || isAllSent || payableUsers.length === 0;
 
     return (
         <NavigationContext.Provider value={navigation}>
             <NavigationRouteContext.Provider value={route}>
-                <View style={{ flex: 1, backgroundColor: '#fcf9f4' }}>
+                <View style={{ flex: 1, backgroundColor: colors.background }}>
                     <View style={{ flex: 1 }}>
-                        <StatusBar style="dark" />
+                        <StatusBar style={isDark ? 'light' : 'dark'} />
                         <View style={{ paddingTop: insets.top, flex: 1 }}>
                             {/* Header */}
-                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#fcf9f4', zIndex: 10, width: '100%' }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingVertical: 12, backgroundColor: colors.background, zIndex: 10, width: '100%' }}>
                                 <TouchableOpacity 
                                     onPress={() => navigation.goBack()} 
-                                    className="w-11 h-11 items-center justify-center rounded-full active:scale-95 bg-white shadow-sm border border-outline-variant/30"
+                                    className="w-11 h-11 items-center justify-center rounded-full active:scale-95 shadow-sm border border-outline-variant/30"
+                                    style={{ backgroundColor: colors.surface }}
                                     activeOpacity={0.7}
                                 >
-                                    <ArrowLeft size={24} color="#85341f" />
+                                    <ArrowLeft size={24} color={isDark ? 'white' : colors.primary} />
                                 </TouchableOpacity>
-                                <Text className="italic font-bold text-primary font-headline-italic" style={{ fontSize: 22 }}>Final Tally</Text>
+                                <Text className="italic font-bold font-headline-italic" style={{ fontSize: 22, color: isDark ? 'white' : colors.primary }}>Final Tally</Text>
                                 <View className="flex-row items-center">
                                     <ReceiptViewer imageUri={imageUri} />
                                 </View>
@@ -212,25 +235,25 @@ export default function ResultScreen({ navigation, route }: any) {
 
                             <ScrollView className="flex-1 px-6 mt-4" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 150 }}>
                                 {/* Global Settings & Payment */}
-                                <View className="bg-white rounded-3xl p-6 mb-8 border border-outline-variant/20 shadow-sm">
-                                    <Text className="text-primary text-xl font-headline mb-5">Adjustments & Payment</Text>
+                                <View style={{ backgroundColor: colors.surface, borderRadius: 24, padding: 24, marginBottom: 32, borderWidth: 1, borderColor: colors.outlineVariant + '33' }}>
+                                    <Text style={{ color: isDark ? 'white' : colors.primary, fontSize: 20, fontFamily: NEWSREADER_BOLD, marginBottom: 20 }}>Adjustments & Payment</Text>
                                     
                                     <View className="space-y-4">
                                         {/* Adjustment Row: Discount */}
                                         <View className="flex-row justify-between items-center mb-3">
                                             <View className="flex-1">
-                                                <Text className="text-on-surface/60 font-body font-bold text-base">Discount</Text>
-                                                <Text className="text-primary/50 text-xs font-body">{subtotal > 0 ? ((parseFloat(discountAmount) || 0) / subtotal * 100).toFixed(2) : 0}%</Text>
+                                                <Text className="font-body font-bold text-base" style={{ color: colors.onSurface, opacity: 0.8 }}>Discount</Text>
+                                                <Text className="text-xs font-body" style={{ color: isDark ? colors.muted : colors.primary, opacity: isDark ? 1 : 0.5 }}>{subtotal > 0 ? ((parseFloat(discountAmount) || 0) / subtotal * 100).toFixed(2) : 0}%</Text>
                                             </View>
-                                            <View className="bg-surface-container-low border border-outline-variant/30 rounded-xl px-3 py-1 w-24 flex-row items-center">
-                                                <Text className="text-green-700 font-body-bold text-base mr-0.5" style={{ transform: [{ translateY: 2.5 }] }}>-</Text>
-                                                <Text className="text-primary/40 font-body-bold text-base mr-1" style={{ transform: [{ translateY: 2.5 }] }}>$</Text>
+                                            <View className="border border-outline-variant/30 rounded-xl px-3 py-1 w-24 flex-row items-center" style={{ backgroundColor: isDark ? '#4a3b38' : colors.surfaceContainerLow }}>
+                                                <Text className="text-green-700 font-body-bold text-base mr-0.5" style={{ transform: [{ translateY: 3 }] }}>-</Text>
+                                                <Text className="font-body-bold text-base mr-1" style={{ color: isDark ? 'white' : colors.primary, transform: [{ translateY: 3 }] }}>$</Text>
                                                 <TextInput
                                                     value={discountAmount}
                                                     onChangeText={setDiscountAmount}
                                                     keyboardType="decimal-pad"
-                                                    className="text-on-surface text-right font-body-bold text-base flex-1 text-green-700"
-                                                    style={{ padding: 0, height: 32, transform: [{ translateY: -2.0 }] }}
+                                                    className="text-right font-body-bold text-base flex-1"
+                                                    style={{ color: colors.success, padding: 0, height: 32 }}
                                                 />
                                             </View>
                                         </View>
@@ -238,17 +261,17 @@ export default function ResultScreen({ navigation, route }: any) {
                                         {/* Adjustment Row: Taxes */}
                                         <View className="flex-row justify-between items-center mb-3">
                                             <View className="flex-1">
-                                                <Text className="text-on-surface/60 font-body font-bold text-base">Taxes & Fees</Text>
-                                                <Text className="text-primary/50 text-xs font-body">{subtotal > 0 ? ((parseFloat(taxAmount) || 0) / subtotal * 100).toFixed(2) : 0}%</Text>
+                                                <Text className="font-body font-bold text-base" style={{ color: colors.onSurface, opacity: 0.8 }}>Taxes & Fees</Text>
+                                                <Text className="text-xs font-body" style={{ color: isDark ? colors.muted : colors.primary, opacity: isDark ? 1 : 0.5 }}>{subtotal > 0 ? ((parseFloat(taxAmount) || 0) / subtotal * 100).toFixed(2) : 0}%</Text>
                                             </View>
-                                            <View className="bg-surface-container-low border border-outline-variant/30 rounded-xl px-3 py-1 w-24 flex-row items-center">
-                                                <Text className="text-primary/40 font-body-bold text-base mr-1" style={{ transform: [{ translateY: 2.5 }] }}>$</Text>
+                                            <View className="border border-outline-variant/30 rounded-xl px-3 py-1 w-24 flex-row items-center" style={{ backgroundColor: isDark ? '#4a3b38' : colors.surfaceContainerLow }}>
+                                                <Text className="font-body-bold text-base mr-1" style={{ color: isDark ? 'white' : colors.primary, transform: [{ translateY: 3 }] }}>$</Text>
                                                 <TextInput
                                                     value={taxAmount}
                                                     onChangeText={setTaxAmount}
                                                     keyboardType="decimal-pad"
-                                                    className="text-on-surface text-right font-body-bold text-base flex-1"
-                                                    style={{ padding: 0, height: 32, transform: [{ translateY: -2.0 }] }}
+                                                    className="text-right font-body-bold text-base flex-1"
+                                                    style={{ color: colors.onSurface, padding: 0, height: 32 }}
                                                 />
                                             </View>
                                         </View>
@@ -256,17 +279,17 @@ export default function ResultScreen({ navigation, route }: any) {
                                         {/* Adjustment Row: Service Charge */}
                                         <View className="flex-row justify-between items-center mb-3">
                                             <View className="flex-1">
-                                                <Text className="text-on-surface/60 font-body font-bold text-base">Service Charge</Text>
-                                                <Text className="text-primary/50 text-xs font-body">{subtotal > 0 ? ((parseFloat(serviceChargeAmount) || 0) / subtotal * 100).toFixed(2) : 0}%</Text>
+                                                <Text className="font-body font-bold text-base" style={{ color: colors.onSurface, opacity: 0.8 }}>Service Charge</Text>
+                                                <Text className="text-xs font-body" style={{ color: isDark ? colors.muted : colors.primary, opacity: isDark ? 1 : 0.5 }}>{subtotal > 0 ? ((parseFloat(serviceChargeAmount) || 0) / subtotal * 100).toFixed(2) : 0}%</Text>
                                             </View>
-                                            <View className="bg-surface-container-low border border-outline-variant/30 rounded-xl px-3 py-1 w-24 flex-row items-center">
-                                                <Text className="text-primary/40 font-body-bold text-base mr-1" style={{ transform: [{ translateY: 2.5 }] }}>$</Text>
+                                            <View className="border border-outline-variant/30 rounded-xl px-3 py-1 w-24 flex-row items-center" style={{ backgroundColor: isDark ? '#4a3b38' : colors.surfaceContainerLow }}>
+                                                <Text className="font-body-bold text-base mr-1" style={{ color: isDark ? 'white' : colors.primary, transform: [{ translateY: 3 }] }}>$</Text>
                                                 <TextInput
                                                     value={serviceChargeAmount}
                                                     onChangeText={setServiceChargeAmount}
                                                     keyboardType="decimal-pad"
-                                                    className="text-on-surface text-right font-body-bold text-base flex-1"
-                                                    style={{ padding: 0, height: 32, transform: [{ translateY: -2.0 }] }}
+                                                    className="text-right font-body-bold text-base flex-1"
+                                                    style={{ color: colors.onSurface, padding: 0, height: 32 }}
                                                 />
                                             </View>
                                         </View>
@@ -274,17 +297,17 @@ export default function ResultScreen({ navigation, route }: any) {
                                         {/* Adjustment Row: Tip */}
                                         <View className="flex-row justify-between items-center mb-6">
                                             <View className="flex-1">
-                                                <Text className="text-on-surface/60 font-body font-bold text-base">Tip</Text>
-                                                <Text className="text-primary/50 text-xs font-body">{subtotal > 0 ? ((parseFloat(tipAmount) || 0) / subtotal * 100).toFixed(2) : 0}%</Text>
+                                                <Text className="font-body font-bold text-base" style={{ color: colors.onSurface, opacity: 0.8 }}>Tip</Text>
+                                                <Text className="text-xs font-body" style={{ color: isDark ? colors.muted : colors.primary, opacity: isDark ? 1 : 0.5 }}>{subtotal > 0 ? ((parseFloat(tipAmount) || 0) / subtotal * 100).toFixed(2) : 0}%</Text>
                                             </View>
-                                            <View className="bg-surface-container-low border border-outline-variant/30 rounded-xl px-3 py-1 w-24 flex-row items-center">
-                                                <Text className="text-primary/40 font-body-bold text-base mr-1" style={{ transform: [{ translateY: 2.5 }] }}>$</Text>
+                                            <View className="border border-outline-variant/30 rounded-xl px-3 py-1 w-24 flex-row items-center" style={{ backgroundColor: isDark ? '#4a3b38' : colors.surfaceContainerLow }}>
+                                                <Text className="font-body-bold text-base mr-1" style={{ color: isDark ? 'white' : colors.primary, transform: [{ translateY: 3 }] }}>$</Text>
                                                 <TextInput
                                                     value={tipAmount}
                                                     onChangeText={setTipAmount}
                                                     keyboardType="decimal-pad"
-                                                    className="text-on-surface text-right font-body-bold text-base flex-1"
-                                                    style={{ padding: 0, height: 32, transform: [{ translateY: -2.0 }] }}
+                                                    className="text-right font-body-bold text-base flex-1"
+                                                    style={{ color: colors.onSurface, padding: 0, height: 32 }}
                                                 />
                                             </View>
                                         </View>
@@ -293,33 +316,33 @@ export default function ResultScreen({ navigation, route }: any) {
 
                                         {/* Venmo Row */}
                                         <View className="flex-row items-center mt-4">
-                                            <Text className="text-on-surface/60 font-body font-bold text-base w-24">Venmo</Text>
-                                            <View className="bg-surface-container-low border border-outline-variant/30 rounded-xl px-3 py-1 flex-1 flex-row items-center">
-                                                <Text className="text-primary/40 font-body-bold text-base mr-1" style={{ transform: [{ translateY: 3.5 }] }}>@</Text>
+                                            <Text className="font-body font-bold text-base w-24" style={{ color: colors.onSurface, opacity: 0.8 }}>Venmo</Text>
+                                            <View className="border border-outline-variant/30 rounded-xl px-3 py-1 flex-1 flex-row items-center" style={{ backgroundColor: isDark ? '#4a3b38' : colors.surfaceContainerLow }}>
+                                                <Text className="font-body-bold text-base mr-1" style={{ color: isDark ? 'white' : colors.primary, transform: [{ translateY: 3 }] }}>@</Text>
                                                 <TextInput
                                                     value={venmoUsername}
                                                     onChangeText={saveVenmoUsername}
                                                     placeholder="yourusername"
                                                     placeholderTextColor="#a1a1aa"
-                                                    className="text-on-surface font-body-bold text-base flex-1"
+                                                    className="font-body-bold text-base flex-1"
                                                     autoCapitalize="none"
                                                     autoCorrect={false}
-                                                    style={{ padding: 0, height: 32, transform: [{ translateY: -2.0 }] }}
+                                                    style={{ color: colors.onSurface, padding: 0, height: 32 }}
                                                 />
                                             </View>
                                         </View>
 
                                         {/* Description Row */}
                                         <View className="flex-row items-center mt-4">
-                                            <Text className="text-on-surface/60 font-body font-bold text-base w-24">Description</Text>
-                                            <View className="bg-surface-container-low border border-outline-variant/30 rounded-xl px-3 py-1 flex-1 flex-row items-center">
+                                            <Text className="font-body font-bold text-base w-24" style={{ color: colors.onSurface, opacity: 0.8 }}>Description</Text>
+                                            <View className="border border-outline-variant/30 rounded-xl px-3 py-1 flex-1 flex-row items-center" style={{ backgroundColor: isDark ? '#4a3b38' : colors.surfaceContainerLow }}>
                                                 <TextInput
                                                     value={paymentNote}
                                                     onChangeText={setPaymentNote}
                                                     placeholder="Dinner at Saganaki..."
                                                     placeholderTextColor="#a1a1aa"
-                                                    className="text-on-surface font-body-bold text-base flex-1"
-                                                    style={{ padding: 0, height: 32, transform: [{ translateY: -2.0 }] }}
+                                                    className="font-body-bold text-base flex-1"
+                                                    style={{ color: colors.onSurface, padding: 0, height: 32 }}
                                                 />
                                             </View>
                                         </View>
@@ -327,14 +350,29 @@ export default function ResultScreen({ navigation, route }: any) {
                                 </View>
 
                                 {/* Breakdown per User */}
-                                <Text className="text-primary text-xl font-headline mb-4 px-2 tracking-wide">Individual Breakdown</Text>
-
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, paddingHorizontal: 8 }}>
+                                    <Text style={{ color: isDark ? 'white' : colors.primary, fontSize: 20, fontFamily: NEWSREADER_BOLD }}>Individual Breakdown</Text>
+                                    <TouchableOpacity
+                                        onPress={handleShare}
+                                        className="bg-primary px-3 py-1.5 rounded-full flex-row items-center active:scale-95"
+                                        style={{
+                                            shadowColor: '#85341f',
+                                            shadowOffset: { width: 0, height: 2 },
+                                            shadowOpacity: 0.3,
+                                            shadowRadius: 4,
+                                            elevation: 4,
+                                        }}
+                                    >
+                                        <ShareIcon size={14} color="white" />
+                                        <Text className="text-white font-body-bold text-xs ml-1.5">Share Summary</Text>
+                                    </TouchableOpacity>
+                                </View>
                                 {users.map((user: User, index: number) => {
                                     const totals = calculateUserTotal(user.id);
                                     if (user.id !== 'me' && totals.total === 0) return null;
 
                                     return (
-                                        <View key={user.id} className="bg-white rounded-3xl mb-5 border border-outline-variant/20 shadow-sm overflow-hidden">
+                                        <View key={user.id} style={{ backgroundColor: colors.surface, borderRadius: 24, marginBottom: 20, borderWidth: 1, borderColor: colors.outlineVariant + '33', overflow: 'hidden' }}>
                                             <TouchableOpacity 
                                                 onPress={() => setExpandedUsers(prev => ({ ...prev, [user.id]: !prev[user.id] }))}
                                                 activeOpacity={0.7}
@@ -358,16 +396,16 @@ export default function ResultScreen({ navigation, route }: any) {
                                                                         marginRight: 16 
                                                                     }}
                                                                 >
-                                                                    <Text style={{ fontWeight: '700', fontSize: 18, color: '#85341f' }}>{user.initials}</Text>
+                                                                    <Text style={{ fontWeight: '700', fontSize: 18, color: colors.primary }}>{user.initials}</Text>
                                                                 </View>
                                                             );
                                                         })()}
-                                                        <Text className="text-on-surface font-body-bold text-xl flex-1" numberOfLines={1}>{user.name}</Text>
+                                                        <Text className="font-body-bold text-xl flex-1" numberOfLines={1} style={{ color: colors.onSurface }}>{user.name}</Text>
                                                     </View>
                                                     <View className="flex-row items-center">
                                                         <View className="flex-row items-baseline">
-                                                            <Text className="text-primary/60 font-body font-bold text-lg mr-0.5">$</Text>
-                                                            <Text className="text-primary text-2xl font-body font-bold">
+                                                            <Text className="font-body font-bold text-lg mr-0.5" style={{ color: isDark ? 'white' : colors.primary, transform: [{ translateY: -1 }] }}>$</Text>
+                                                            <Text className="text-2xl font-body font-bold" style={{ color: isDark ? 'white' : colors.primary }}>
                                                                 {totals.total.toFixed(2)}
                                                             </Text>
                                                         </View>
@@ -375,30 +413,34 @@ export default function ResultScreen({ navigation, route }: any) {
                                                         {user.id !== 'me' && (
                                                             <TouchableOpacity
                                                                 onPress={(e) => { e.stopPropagation(); sendRequest(user, totals.total); }}
-                                                                className="bg-primary/10 w-9 h-9 rounded-full items-center justify-center active:scale-95 ml-3"
+                                                                className={`${sentUsers[user.id] ? 'bg-green-700/10' : (isDark ? 'bg-white/10' : 'bg-primary/10')} w-9 h-9 rounded-full items-center justify-center active:scale-95 ml-3`}
                                                             >
-                                                                <Send size={15} color="#85341f" style={{ transform: [{ translateX: -1 }, { translateY: 1 }] }} />
+                                                                {sentUsers[user.id] ? (
+                                                                    <Check size={16} color="#15803d" />
+                                                                ) : (
+                                                                    <Send size={15} color={isDark ? 'white' : colors.primary} style={{ transform: [{ translateX: -1 }, { translateY: 1 }] }} />
+                                                                )}
                                                             </TouchableOpacity>
                                                         )}
                                                     </View>
                                                 </View>
 
-                                                <View className="mt-6 flex-row flex-wrap justify-between items-center pt-5 border-t border-outline-variant/10">
+                                                <View className="mt-6 flex-row flex-wrap justify-between items-center pt-5 border-t" style={{ borderTopColor: colors.outlineVariant + (isDark ? '40' : '1A') }}>
                                                     <View className="flex-row items-center mb-2">
-                                                        <Text className="text-on-surface/40 text-[10px] font-body font-bold">ITEMS </Text>
-                                                        <Text className="text-on-surface/60 text-sm font-body font-bold">${totals.items.toFixed(2)}</Text>
+                                                        <Text className="text-[10px] font-body font-bold" style={{ color: colors.onSurface, opacity: isDark ? 0.6 : 0.4 }}>ITEMS </Text>
+                                                        <Text className="text-sm font-body font-bold" style={{ color: colors.onSurface, opacity: isDark ? 0.8 : 0.6 }}>${totals.items.toFixed(2)}</Text>
                                                     </View>
                                                     <View className="flex-row items-center mb-2">
-                                                        <Text className="text-on-surface/40 text-[10px] font-body font-bold">TAX </Text>
-                                                        <Text className="text-on-surface/60 text-sm font-body font-bold">${totals.tax.toFixed(2)}</Text>
+                                                        <Text className="text-[10px] font-body font-bold" style={{ color: colors.onSurface, opacity: isDark ? 0.6 : 0.4 }}>TAX </Text>
+                                                        <Text className="text-sm font-body font-bold" style={{ color: colors.onSurface, opacity: isDark ? 0.8 : 0.6 }}>${totals.tax.toFixed(2)}</Text>
                                                     </View>
                                                     <View className="flex-row items-center mb-2">
-                                                        <Text className="text-on-surface/40 text-[10px] font-body font-bold">EXTRA </Text>
-                                                        <Text className="text-on-surface/60 text-sm font-body font-bold">${(totals.serviceCharge + totals.tip).toFixed(2)}</Text>
+                                                        <Text className="text-[10px] font-body font-bold" style={{ color: colors.onSurface, opacity: isDark ? 0.6 : 0.4 }}>EXTRA </Text>
+                                                        <Text className="text-sm font-body font-bold" style={{ color: colors.onSurface, opacity: isDark ? 0.8 : 0.6 }}>${(totals.serviceCharge + totals.tip).toFixed(2)}</Text>
                                                     </View>
                                                     {totals.discount > 0 && (
                                                         <View className="flex-row items-center mb-2">
-                                                            <Text className="text-on-surface/40 text-[10px] font-body font-bold">DISC </Text>
+                                                            <Text className="text-[10px] font-body font-bold" style={{ color: colors.onSurface, opacity: isDark ? 0.6 : 0.4 }}>DISC </Text>
                                                             <Text className="text-green-700 text-sm font-body font-bold">-${totals.discount.toFixed(2)}</Text>
                                                         </View>
                                                     )}
@@ -408,14 +450,14 @@ export default function ResultScreen({ navigation, route }: any) {
                                             </TouchableOpacity>
 
                                             {expandedUsers[user.id] && (
-                                                <View className="px-6 pb-6 pt-2 bg-surface-container-lowest border-t border-outline-variant/10">
+                                                <View className="px-6 pb-6 pt-2 bg-surface-container-lowest border-t" style={{ borderTopColor: colors.outlineVariant + (isDark ? '40' : '1A') }}>
                                                     {items.filter((i: BillItem) => i.assignedTo.includes(user.id)).map((item: BillItem) => {
                                                         const userShares = item.assignedTo.filter(id => id === user.id).length;
                                                         const sharePrice = (item.price / item.assignedTo.length) * userShares;
                                                         return (
                                                             <View key={item.id} className="flex-row justify-between items-center mb-3">
-                                                                <Text className="text-on-surface/80 font-body text-base flex-1 pr-4">{userShares > 1 ? `${userShares}x ` : ''}{item.name}</Text>
-                                                                <Text className="text-on-surface font-body-bold text-base">${sharePrice.toFixed(2)}</Text>
+                                                                <Text className="font-body text-base flex-1 pr-4" style={{ color: colors.onSurface, opacity: 0.8 }}>{userShares > 1 ? `${userShares}x ` : ''}{item.name}</Text>
+                                                                <Text className="font-body-bold text-base" style={{ color: colors.onSurface }}>${sharePrice.toFixed(2)}</Text>
                                                             </View>
                                                         );
                                                     })}
@@ -434,11 +476,17 @@ export default function ResultScreen({ navigation, route }: any) {
                                                     )}
                                                     
                                                     <TouchableOpacity 
-                                                        className="mt-4 bg-primary/10 py-3 rounded-xl flex-row justify-center items-center active:scale-[0.98]"
+                                                        className={`mt-4 ${sentUsers[user.id] ? 'bg-green-700/10' : (isDark ? 'bg-white/10' : 'bg-primary/10')} py-3 rounded-xl flex-row justify-center items-center active:scale-[0.98]`}
                                                         onPress={() => sendDetailedRequest(user, totals)}
                                                     >
-                                                        <Send size={16} color="#85341f" />
-                                                        <Text className="text-primary font-body-bold ml-2">Text Detailed Breakdown</Text>
+                                                        {sentUsers[user.id] ? (
+                                                            <Check size={16} color="#15803d" />
+                                                        ) : (
+                                                            <Send size={16} color={isDark ? 'white' : "#85341f"} />
+                                                        )}
+                                                        <Text className={`${sentUsers[user.id] ? 'text-green-700' : (isDark ? 'text-white' : 'text-primary')} font-body-bold ml-2`}>
+                                                            {sentUsers[user.id] ? 'Sent!' : 'Text Detailed Breakdown'}
+                                                        </Text>
                                                     </TouchableOpacity>
                                                 </View>
                                             )}
@@ -448,12 +496,13 @@ export default function ResultScreen({ navigation, route }: any) {
                             </ScrollView>
 
                             {/* Footer Actions */}
-                            <View
+                            <Animated.View
+                                entering={FadeInDown}
                                 style={{
                                     paddingBottom: Math.max(insets.bottom, 16),
                                     paddingTop: 16,
                                     paddingHorizontal: 24,
-                                    backgroundColor: '#fcf9f4',
+                                    backgroundColor: colors.background,
                                     borderTopWidth: 1,
                                     borderTopColor: 'rgba(219, 193, 186, 0.2)',
                                     flexDirection: 'row',
@@ -461,29 +510,22 @@ export default function ResultScreen({ navigation, route }: any) {
                                     gap: 12
                                 }}
                             >
-                                <TouchableOpacity
-                                    onPress={copyToClipboard}
-                                    className="flex-1 bg-white border border-outline-variant/50 h-16 rounded-3xl flex-row justify-center items-center shadow-sm active:scale-[0.98]"
-                                >
-                                    <Copy size={20} color="#85341f" />
-                                    <Text className="text-primary font-body-bold text-base ml-2">Copy Text</Text>
-                                </TouchableOpacity>
-
-                                <TouchableOpacity
-                                    onPress={handleShare}
-                                    className="flex-1 bg-primary h-16 rounded-3xl flex-row justify-center items-center shadow-lg active:scale-[0.98]"
-                                    style={{
-                                        shadowColor: '#85341f',
-                                        shadowOffset: { width: 0, height: 8 },
-                                        shadowOpacity: 0.3,
-                                        shadowRadius: 16,
-                                        elevation: 8,
-                                    }}
-                                >
-                                    <ShareIcon size={20} color="white" />
-                                    <Text className="text-white font-body-bold text-base ml-2">Share Summary</Text>
-                                </TouchableOpacity>
-                            </View>
+                                    <TouchableOpacity
+                                        disabled={!isReadyToFinish}
+                                        onPress={() => navigation.reset({ index: 0, routes: [{ name: 'Home' }] })}
+                                        className={`w-full h-16 rounded-3xl flex-row justify-center items-center shadow-lg ${isReadyToFinish ? 'bg-primary active:scale-[0.98]' : 'bg-primary/50'}`}
+                                        style={{
+                                            shadowColor: '#85341f',
+                                            shadowOffset: { width: 0, height: 8 },
+                                            shadowOpacity: isReadyToFinish ? 0.3 : 0,
+                                            shadowRadius: 16,
+                                            elevation: isReadyToFinish ? 8 : 0,
+                                        }}
+                                    >
+                                        <Check size={20} color={isReadyToFinish ? "white" : "rgba(255, 255, 255, 0.5)"} />
+                                        <Text style={{ color: isReadyToFinish ? 'white' : 'rgba(255, 255, 255, 0.5)', fontSize: 18, fontWeight: '800', letterSpacing: 0.5, marginLeft: 8 }}>Finished</Text>
+                                    </TouchableOpacity>
+                            </Animated.View>
                         </View>
                     </View>
                 </View>
