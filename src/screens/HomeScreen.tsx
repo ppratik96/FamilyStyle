@@ -41,7 +41,7 @@ export default function HomeScreen({ navigation }: any) {
                             numberOfLines={1}
                             adjustsFontSizeToFit
                         >
-                            FamilyStyle
+                            {"FamilyStyle "}
                         </OutlinedText>
                     </View>
                     <View style={styles.toggleContainer}>
@@ -179,7 +179,6 @@ const styles = StyleSheet.create({
         fontFamily: 'Newsreader_700Bold_Italic',
         fontSize: 48,
         letterSpacing: -2,
-        paddingRight: 10,
     },
     toggleContainer: {
         flex: 1,
