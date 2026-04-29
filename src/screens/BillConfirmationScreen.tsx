@@ -249,8 +249,8 @@ export default function BillConfirmationScreen({ navigation, route }: any) {
                                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                                                 <Text style={{ color: colors.onSurface + '99', fontSize: 16, fontWeight: '700' }}>Discount</Text>
                                                 <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? '#4a3b38' : colors.surface, borderRadius: 12, paddingHorizontal: 8, height: 36, borderWidth: 1, borderColor: colors.outlineVariant + '33' }}>
-                                                    <Text style={{ color: colors.success, fontWeight: '700', marginRight: 2, fontSize: 16, transform: [{ translateY: 3 }] }}>-</Text>
-                                                    <Text style={{ color: isDark ? 'white' : colors.primary, marginRight: 4, fontWeight: '700', fontSize: 14, transform: [{ translateY: 3 }] }}>$</Text>
+                                                    <Text style={{ color: colors.success, fontWeight: '700', marginRight: 2, fontSize: 16 }}>-</Text>
+                                                    <Text style={{ color: isDark ? 'white' : colors.primary, marginRight: 4, fontWeight: '700', fontSize: 14 }}>$</Text>
                                                     <TextInput
                                                         value={discount.toString()}
                                                         onChangeText={(val) => setDiscount(Number(val) || 0)}
@@ -260,11 +260,11 @@ export default function BillConfirmationScreen({ navigation, route }: any) {
                                                 </View>
                                             </View>
 
-                                            {/* Taxes & Fees */}
+                                             {/* Taxes & Fees */}
                                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                                                 <Text style={{ color: colors.onSurface + '99', fontSize: 16, fontWeight: '700' }}>Taxes & Fees</Text>
                                                 <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? '#4a3b38' : colors.surface, borderRadius: 12, paddingHorizontal: 8, height: 36, borderWidth: 1, borderColor: colors.outlineVariant + '33' }}>
-                                                    <Text style={{ color: isDark ? 'white' : colors.primary, marginRight: 4, fontWeight: '700', fontSize: 14, transform: [{ translateY: 3 }] }}>$</Text>
+                                                    <Text style={{ color: isDark ? 'white' : colors.primary, marginRight: 4, fontWeight: '700', fontSize: 14 }}>$</Text>
                                                     <TextInput
                                                         value={tax.toString()}
                                                         onChangeText={(val) => setTax(Number(val) || 0)}
@@ -278,7 +278,7 @@ export default function BillConfirmationScreen({ navigation, route }: any) {
                                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                                                 <Text style={{ color: colors.onSurface + '99', fontSize: 16, fontWeight: '700' }}>Service Charge</Text>
                                                 <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? '#4a3b38' : colors.surface, borderRadius: 12, paddingHorizontal: 8, height: 36, borderWidth: 1, borderColor: colors.outlineVariant + '33' }}>
-                                                    <Text style={{ color: isDark ? 'white' : colors.primary, marginRight: 4, fontWeight: '700', fontSize: 14, transform: [{ translateY: 3 }] }}>$</Text>
+                                                    <Text style={{ color: isDark ? 'white' : colors.primary, marginRight: 4, fontWeight: '700', fontSize: 14 }}>$</Text>
                                                     <TextInput
                                                         value={serviceCharge.toString()}
                                                         onChangeText={(val) => setServiceCharge(Number(val) || 0)}
@@ -292,7 +292,7 @@ export default function BillConfirmationScreen({ navigation, route }: any) {
                                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                                                 <Text style={{ color: colors.onSurface + '99', fontSize: 16, fontWeight: '700' }}>Tip</Text>
                                                 <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? '#4a3b38' : colors.surface, borderRadius: 12, paddingHorizontal: 8, height: 36, borderWidth: 1, borderColor: colors.outlineVariant + '33' }}>
-                                                    <Text style={{ color: isDark ? 'white' : colors.primary, marginRight: 4, fontWeight: '700', fontSize: 14, transform: [{ translateY: 3 }] }}>$</Text>
+                                                    <Text style={{ color: isDark ? 'white' : colors.primary, marginRight: 4, fontWeight: '700', fontSize: 14 }}>$</Text>
                                                     <TextInput
                                                         value={tip.toString()}
                                                         onChangeText={(val) => setTip(Number(val) || 0)}
@@ -307,7 +307,7 @@ export default function BillConfirmationScreen({ navigation, route }: any) {
                                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                                                 <Text style={{ color: colors.onSurface, fontSize: 18, fontWeight: '700' }}>Total</Text>
                                                 <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-                                                    <Text style={{ color: isDark ? 'white' : colors.primary, fontWeight: '700', fontSize: 20, marginRight: 4, transform: [{ translateY: -1 }] }}>$</Text>
+                                                    <Text style={{ color: isDark ? 'white' : colors.primary, fontWeight: '700', fontSize: 20, marginRight: 4 }}>$</Text>
                                                     <Text style={{ color: colors.onSurface, fontSize: 20, fontWeight: '700' }}>
                                                         {Math.max(0, subtotal - discount + tax + serviceCharge + tip).toFixed(2)}
                                                     </Text>
