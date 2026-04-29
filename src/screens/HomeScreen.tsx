@@ -38,9 +38,10 @@ export default function HomeScreen({ navigation }: any) {
                             style={[styles.toggleButton, { 
                                 backgroundColor: colors.surfaceContainerLow,
                                 borderColor: colors.outlineVariant + '4D',
+                                marginRight: 10
                             }]}
                         >
-                            <History size={18} color={colors.primary} />
+                            <History size={18} color={colors.onSurfaceVariant} />
                         </TouchableOpacity>
                     </View>
                     <View style={styles.logoContainer}>
