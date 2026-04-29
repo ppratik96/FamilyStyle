@@ -38,11 +38,11 @@ export default function BillConfirmationScreen({ navigation, route }: any) {
         try {
             const rawData = await mockProcessBill(imageUri);
 
-            if (rawData.tax) setTax(rawData.tax);
-            if (rawData.serviceCharge) setServiceCharge(rawData.serviceCharge);
-            if (rawData.tip) setTip(rawData.tip);
-            if (rawData.discount) setDiscount(rawData.discount);
-            if (rawData.subtotal) setExpectedSubtotal(rawData.subtotal);
+            if (rawData.tax) setTax(Number(rawData.tax));
+            if (rawData.serviceCharge) setServiceCharge(Number(rawData.serviceCharge));
+            if (rawData.tip) setTip(Number(rawData.tip));
+            if (rawData.discount) setDiscount(Number(rawData.discount));
+            if (rawData.subtotal) setExpectedSubtotal(Number(rawData.subtotal));
             if (rawData.restaurantName) setRestaurantName(rawData.restaurantName);
 
             const processedItems: BillItem[] = [];
@@ -251,7 +251,7 @@ export default function BillConfirmationScreen({ navigation, route }: any) {
                                                     <Text style={{ color: isDark ? 'white' : colors.primary, marginRight: 4, fontWeight: '700', fontSize: 14, transform: [{ translateY: 3 }] }}>$</Text>
                                                     <TextInput
                                                         value={discount.toString()}
-                                                        onChangeText={setDiscount}
+                                                        onChangeText={(val) => setDiscount(Number(val) || 0)}
                                                         keyboardType="decimal-pad"
                                                         style={{ color: colors.success, fontSize: 16, width: 56, textAlign: 'right', fontWeight: '700', padding: 0 }}
                                                     />
@@ -265,7 +265,7 @@ export default function BillConfirmationScreen({ navigation, route }: any) {
                                                     <Text style={{ color: isDark ? 'white' : colors.primary, marginRight: 4, fontWeight: '700', fontSize: 14, transform: [{ translateY: 3 }] }}>$</Text>
                                                     <TextInput
                                                         value={tax.toString()}
-                                                        onChangeText={setTax}
+                                                        onChangeText={(val) => setTax(Number(val) || 0)}
                                                         keyboardType="decimal-pad"
                                                         style={{ color: colors.onSurface, fontSize: 16, width: 56, textAlign: 'right', fontWeight: '700', padding: 0 }}
                                                     />
@@ -279,7 +279,7 @@ export default function BillConfirmationScreen({ navigation, route }: any) {
                                                     <Text style={{ color: isDark ? 'white' : colors.primary, marginRight: 4, fontWeight: '700', fontSize: 14, transform: [{ translateY: 3 }] }}>$</Text>
                                                     <TextInput
                                                         value={serviceCharge.toString()}
-                                                        onChangeText={setServiceCharge}
+                                                        onChangeText={(val) => setServiceCharge(Number(val) || 0)}
                                                         keyboardType="decimal-pad"
                                                         style={{ color: colors.onSurface, fontSize: 16, width: 56, textAlign: 'right', fontWeight: '700', padding: 0 }}
                                                     />
@@ -293,7 +293,7 @@ export default function BillConfirmationScreen({ navigation, route }: any) {
                                                     <Text style={{ color: isDark ? 'white' : colors.primary, marginRight: 4, fontWeight: '700', fontSize: 14, transform: [{ translateY: 3 }] }}>$</Text>
                                                     <TextInput
                                                         value={tip.toString()}
-                                                        onChangeText={setTip}
+                                                        onChangeText={(val) => setTip(Number(val) || 0)}
                                                         keyboardType="decimal-pad"
                                                         style={{ color: colors.onSurface, fontSize: 16, width: 56, textAlign: 'right', fontWeight: '700', padding: 0 }}
                                                     />
