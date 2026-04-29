@@ -21,8 +21,8 @@ const NEWSREADER_BOLD = 'Newsreader_700Bold';
 const NEWSREADER_ITALIC_BOLD = 'Newsreader_700Bold_Italic';
 const NEWSREADER_REGULAR = 'Newsreader_400Regular';
 
-const APP_STORE_LINK = "https://apps.apple.com/app/id6761743135";
-const MARKETING_FOOTER = `\n\nSplit using FamilyStyle: ${APP_STORE_LINK}`;
+const APP_STORE_LINK = "apps.apple.com/app/id6761743135"; // Shortened for SMS
+const MARKETING_FOOTER = `\n\nSplit using FamilyStyle: https://${APP_STORE_LINK}`;
 
 // High-end distinct palette helper
 const getUserColor = (userId: string) => {
@@ -167,10 +167,11 @@ export default function ResultScreen({ navigation, route }: any) {
             
             if (venmoUsername.trim()) {
                 const cleanUsername = venmoUsername.trim().replace('@', '');
-                message += ` You can venmo me (@${cleanUsername}) here: ${buildVenmoUrl(venmoUsername, amount, note)}`;
+                const brandedNote = `${note} - via FamilyStyle`;
+                message += ` You can venmo me (@${cleanUsername}) here: ${buildVenmoUrl(venmoUsername, amount, brandedNote)}`;
             }
             
-            message += MARKETING_FOOTER;
+            // Removed MARKETING_FOOTER from individual requests to preserve Venmo Link Preview
             
             await SMS.sendSMSAsync(recipients, message);
             setSentUsers(prev => ({ ...prev, [user.id]: true }));
@@ -203,10 +204,11 @@ export default function ResultScreen({ navigation, route }: any) {
             
             if (venmoUsername.trim()) {
                 const cleanUsername = venmoUsername.trim().replace('@', '');
-                message += `\nYou can venmo me (@${cleanUsername}) here: ${buildVenmoUrl(venmoUsername, totals.total, note)}`;
+                const brandedNote = `${note} - via FamilyStyle`;
+                message += `\nYou can venmo me (@${cleanUsername}) here: ${buildVenmoUrl(venmoUsername, totals.total, brandedNote)}`;
             }
             
-            message += MARKETING_FOOTER;
+            // Removed MARKETING_FOOTER from individual requests to preserve Venmo Link Preview
             
             await SMS.sendSMSAsync(recipients, message);
             setSentUsers(prev => ({ ...prev, [user.id]: true }));
