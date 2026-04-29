@@ -19,3 +19,29 @@ export interface BillStatus {
     tax: number;
     total: number;
 }
+
+export interface HistoryItem {
+    id: string;
+    date: number; // timestamp
+    restaurantName?: string;
+    totalAmount: number;
+    subtotal: number;
+    tax: number;
+    tip: number;
+    serviceCharge: number;
+    discount: number;
+    items?: BillItem[];
+    users: {
+        id: string;
+        name: string;
+        amount: number;
+        wasRequested: boolean;
+    }[];
+}
+
+export interface Metrics {
+    totalBillsSplit: number;
+    totalSpent: number;
+    mostVisitedRestaurant?: string;
+    mostSplitWith?: string;
+}

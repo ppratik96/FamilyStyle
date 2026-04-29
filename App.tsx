@@ -10,6 +10,8 @@ import CameraScreen from './src/screens/CameraScreen';
 import BillConfirmationScreen from './src/screens/BillConfirmationScreen';
 import SplittingScreen from './src/screens/SplittingScreen';
 import ResultScreen from './src/screens/ResultScreen';
+import HistoryScreen from './src/screens/HistoryScreen';
+import HistoryDetailScreen from './src/screens/HistoryDetailScreen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -50,6 +52,8 @@ export default function App() {
               <Stack.Screen name="BillConfirmation" component={BillConfirmationScreen} />
               <Stack.Screen name="Splitting" component={SplittingScreen} />
               <Stack.Screen name="Result" component={ResultScreen} />
+              <Stack.Screen name="History" component={HistoryScreen} />
+              <Stack.Screen name="HistoryDetail" component={HistoryDetailScreen} />
             </Stack.Navigator>
             <StatusBar style="dark" />
           </NavigationContainer>

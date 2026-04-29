@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, TouchableOpacity, Image, Dimensions, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import { Camera, Upload, Moon, Sun } from "lucide-react-native";
+import { Camera, Upload, Moon, Sun, History } from "lucide-react-native";
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -32,7 +32,17 @@ export default function HomeScreen({ navigation }: any) {
             <View style={styles.content}>
                 {/* Centered Logo & Theme Toggle */}
                 <SafeAreaView edges={['top']} style={styles.header}>
-                    <View style={styles.headerSpacer} />
+                    <View style={styles.headerLeftContainer}>
+                        <TouchableOpacity 
+                            onPress={() => navigation.navigate("History")}
+                            style={[styles.toggleButton, { 
+                                backgroundColor: colors.surfaceContainerLow,
+                                borderColor: colors.outlineVariant + '4D',
+                            }]}
+                        >
+                            <History size={18} color={colors.primary} />
+                        </TouchableOpacity>
+                    </View>
                     <View style={styles.logoContainer}>
                         <OutlinedText 
                             style={[styles.logoText, { color: isDark ? 'white' : colors.primary }]}
@@ -169,6 +179,11 @@ const styles = StyleSheet.create({
     },
     headerSpacer: {
         flex: 1,
+    },
+    headerLeftContainer: {
+        flex: 1,
+        alignItems: 'flex-start',
+        justifyContent: 'center',
     },
     logoContainer: {
         flex: 3,

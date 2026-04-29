@@ -14,6 +14,7 @@ import { StatusBar } from 'expo-status-bar';
 import ReceiptViewer from '../components/ReceiptViewer';
 import { useTheme } from '../ThemeContext';
 import { OutlinedText } from '../components/OutlinedText';
+import { HistoryService } from '../services/historyService';
 
 // Use the loaded font names from App.tsx (expo-google-fonts)
 const NEWSREADER_BOLD = 'Newsreader_700Bold';
@@ -512,7 +513,34 @@ export default function ResultScreen({ navigation, route }: any) {
                             >
                                     <TouchableOpacity
                                         disabled={!isReadyToFinish}
-                                        onPress={() => navigation.reset({ index: 0, routes: [{ name: 'Home' }] })}
+                                        onPress={async () => {
+                                            const payableUsers = users.filter((u: User) => u.id !== 'me' && calculateUserTotal(u.id).total > 0);
+                                            const totalAmount = Math.max(0, subtotal - (parseFloat(discountAmount) || 0) + (parseFloat(taxAmount) || 0) + (parseFloat(serviceChargeAmount) || 0) + (parseFloat(tipAmount) || 0));
+                                            
+                                            const historyUsers = users.map((u: User) => {
+                                                const userTotals = calculateUserTotal(u.id);
+                                                return {
+                                                    id: u.id,
+                                                    name: u.name,
+                                                    amount: userTotals.total,
+                                                    wasRequested: u.id !== 'me' && userTotals.total > 0
+                                                };
+                                            });
+
+                                            await HistoryService.saveBillToHistory({
+                                                restaurantName,
+                                                totalAmount,
+                                                subtotal,
+                                                tax: parseFloat(taxAmount) || 0,
+                                                tip: parseFloat(tipAmount) || 0,
+                                                serviceCharge: parseFloat(serviceChargeAmount) || 0,
+                                                discount: parseFloat(discountAmount) || 0,
+                                                items: items,
+                                                users: historyUsers
+                                            });
+                                            
+                                            navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+                                        }}
                                         className={`w-full h-16 rounded-3xl flex-row justify-center items-center shadow-lg ${isReadyToFinish ? 'bg-primary active:scale-[0.98]' : 'bg-primary/50'}`}
                                         style={{
                                             shadowColor: '#85341f',
