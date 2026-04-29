@@ -234,10 +234,10 @@ export default function BillConfirmationScreen({ navigation, route }: any) {
                                                 </Text>
                                             </View>
                                         </View>
-                                        {expectedSubtotal > 0 && Math.abs(subtotal + serviceCharge - expectedSubtotal) > 0.05 && (
+                                        {expectedSubtotal > 0 && Math.abs(subtotal + serviceCharge - discount - expectedSubtotal) > 0.05 && (
                                             <View style={{ backgroundColor: colors.errorBg, padding: 12, borderRadius: 12, marginBottom: 24, borderWidth: 1, borderColor: colors.errorBorder, flexDirection: 'row', alignItems: 'center' }}>
                                                 <Text style={{ color: colors.error, fontSize: 12, fontWeight: '500', flex: 1 }}>
-                                                    Heads up! The sum of items and service charge (${(subtotal + serviceCharge).toFixed(2)}) doesn't match the receipt subtotal (${expectedSubtotal.toFixed(2)}). Please add missing items or check prices above.
+                                                    Heads up! The sum of items, service charge, and discounts (${(subtotal + serviceCharge - discount).toFixed(2)}) doesn't match the receipt subtotal (${expectedSubtotal.toFixed(2)}). Please add missing items or check prices above.
                                                 </Text>
                                             </View>
                                         )}
