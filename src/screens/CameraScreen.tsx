@@ -33,8 +33,8 @@ export default function CameraScreen({ navigation, route }: any) {
         // Camera permissions are not granted yet.
         return (
             <View style={styles.container} className="justify-center items-center bg-black">
-                <Text style={styles.message} className="text-white text-center mb-4">We need your permission to show the camera</Text>
-                <Button onPress={requestPermission} title="grant permission" />
+                <Text style={styles.message} className="text-white text-center mb-4 px-6">FamilyStyle needs camera access to scan your receipts and automatically extract the items.</Text>
+                <Button onPress={requestPermission} title="Continue" />
             </View>
         );
     }

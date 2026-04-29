@@ -29,13 +29,13 @@ export default function HomeScreen({ navigation }: any) {
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             <StatusBar style={isDark ? 'light' : 'dark'} />
 
-            <View style={styles.content}>
+            <ScrollView contentContainerStyle={{ flexGrow: 1, paddingBottom: 60 }} showsVerticalScrollIndicator={false} style={styles.content}>
                 {/* Centered Logo & Theme Toggle */}
                 <SafeAreaView edges={['top']} style={styles.header}>
                     <View style={styles.headerLeftContainer}>
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             onPress={() => navigation.navigate("History")}
-                            style={[styles.toggleButton, { 
+                            style={[styles.toggleButton, {
                                 backgroundColor: colors.surfaceContainerLow,
                                 borderColor: colors.outlineVariant + '4D',
                                 marginRight: 10
@@ -45,7 +45,7 @@ export default function HomeScreen({ navigation }: any) {
                         </TouchableOpacity>
                     </View>
                     <View style={styles.logoContainer}>
-                        <OutlinedText 
+                        <OutlinedText
                             style={[styles.logoText, { color: isDark ? 'white' : colors.primary }]}
                             outlineColor="transparent"
                             numberOfLines={1}
@@ -157,7 +157,7 @@ export default function HomeScreen({ navigation }: any) {
                         <View style={[styles.brandingLine, { backgroundColor: colors.onSurface + '33' }]} />
                     </View>
                 </View>
-            </View>
+            </ScrollView>
         </View>
     );
 }

@@ -30,6 +30,16 @@ export const HistoryService = {
         }
     },
 
+    async deleteBill(billId: string): Promise<void> {
+        try {
+            const existingHistory = await this.getHistory();
+            const updatedHistory = existingHistory.filter(bill => bill.id !== billId);
+            await AsyncStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updatedHistory));
+        } catch (error) {
+            console.error('Failed to delete bill from history:', error);
+        }
+    },
+
     async clearHistory(): Promise<void> {
         try {
             await AsyncStorage.removeItem(HISTORY_STORAGE_KEY);

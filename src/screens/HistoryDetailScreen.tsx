@@ -1,7 +1,9 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, SafeAreaView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, Calendar, Utensils, Users, Receipt, CornerDownRight } from 'lucide-react-native';
+import { ArrowLeft, Calendar, Utensils, Users, Receipt, CornerDownRight, Trash2 } from 'lucide-react-native';
+import { Alert } from 'react-native';
+import { HistoryService } from '../services/historyService';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { StatusBar } from 'expo-status-bar';
 import { useTheme } from '../ThemeContext';
@@ -36,6 +38,24 @@ export default function HistoryDetailScreen({ navigation, route }: any) {
         return palette[index];
     };
 
+    const handleDeleteBill = () => {
+        Alert.alert(
+            "Delete Bill",
+            "Are you sure you want to remove this bill from your history? This cannot be undone.",
+            [
+                { text: "Cancel", style: "cancel" },
+                { 
+                    text: "Delete", 
+                    style: "destructive",
+                    onPress: async () => {
+                        await HistoryService.deleteBill(bill.id);
+                        navigation.goBack();
+                    }
+                }
+            ]
+        );
+    };
+
     return (
         <View style={{ flex: 1, backgroundColor: colors.background }}>
             <StatusBar style={isDark ? "light" : "dark"} />
@@ -49,7 +69,7 @@ export default function HistoryDetailScreen({ navigation, route }: any) {
                     >
                         <ArrowLeft size={20} color={colors.onSurface} />
                     </TouchableOpacity>
-                    <View style={{ flex: 1, alignItems: 'center', marginRight: 40 }}>
+                    <View style={{ flex: 1, alignItems: 'center' }}>
                         <OutlinedText 
                             style={{ fontFamily: 'Newsreader_700Bold_Italic', fontSize: 24, color: colors.primary }}
                             outlineColor="transparent"
@@ -57,6 +77,12 @@ export default function HistoryDetailScreen({ navigation, route }: any) {
                             Split Details
                         </OutlinedText>
                     </View>
+                    <TouchableOpacity 
+                        onPress={handleDeleteBill}
+                        style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.outlineVariant + '33' }}
+                    >
+                        <Trash2 size={18} color={colors.error} />
+                    </TouchableOpacity>
                 </View>
             </SafeAreaView>
 

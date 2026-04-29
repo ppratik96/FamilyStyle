@@ -114,7 +114,7 @@ export default function ResultScreen({ navigation, route }: any) {
         const cleanUsername = username.trim().replace('@', '');
         const params = [`txn=pay`, `recipients=${cleanUsername}`];
         if (amount !== undefined) params.push(`amount=${amount.toFixed(2)}`);
-        if (note) params.push(`note=${encodeURIComponent(note.replace(/ /g, '\u00A0'))}`);
+        if (note) params.push(`note=${encodeURIComponent(note)}`);
         return `https://venmo.com/?${params.join('&')}`;
     };
 

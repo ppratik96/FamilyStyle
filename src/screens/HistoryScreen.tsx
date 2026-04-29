@@ -19,8 +19,11 @@ export default function HistoryScreen({ navigation }: any) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        loadData();
-    }, []);
+        const unsubscribe = navigation.addListener('focus', () => {
+            loadData();
+        });
+        return unsubscribe;
+    }, [navigation]);
 
     const loadData = async () => {
         setLoading(true);
@@ -219,6 +222,36 @@ export default function HistoryScreen({ navigation }: any) {
                                 </TouchableOpacity>
                             </Animated.View>
                         ))
+                    )}
+                    
+                    {history.length > 0 && (
+                        <TouchableOpacity 
+                            onPress={() => {
+                                Alert.alert(
+                                    "Clear History",
+                                    "This will delete all your past bill splits and reset your statistics. Are you sure?",
+                                    [
+                                        { text: "Cancel", style: "cancel" },
+                                        { 
+                                            text: "Clear All", 
+                                            style: "destructive",
+                                            onPress: async () => {
+                                                await HistoryService.clearHistory();
+                                                loadData();
+                                            }
+                                        }
+                                    ]
+                                );
+                            }}
+                            style={{ 
+                                marginTop: 40, 
+                                paddingVertical: 12, 
+                                alignItems: 'center',
+                                opacity: 0.5
+                            }}
+                        >
+                            <Text style={{ color: colors.error, fontSize: 14, fontWeight: '600' }}>Clear All History</Text>
+                        </TouchableOpacity>
                     )}
                 </View>
             </ScrollView>

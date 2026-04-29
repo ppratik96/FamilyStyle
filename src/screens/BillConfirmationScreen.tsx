@@ -228,7 +228,7 @@ export default function BillConfirmationScreen({ navigation, route }: any) {
                                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
                                             <Text style={{ color: colors.onSurface + '99', fontSize: 18, fontWeight: '700' }}>Subtotal</Text>
                                             <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-                                                <Text style={{ color: isDark ? 'white' : colors.primary, fontWeight: '700', fontSize: 30, marginRight: 4, transform: [{ translateY: -1 }] }}>$</Text>
+                                                <Text style={{ color: isDark ? 'white' : colors.primary, fontWeight: '700', fontSize: 30, marginRight: 4 }}>$</Text>
                                                 <Text style={{ color: colors.onSurface, fontSize: 30, fontWeight: '700' }}>
                                                     {subtotal.toFixed(2)}
                                                 </Text>

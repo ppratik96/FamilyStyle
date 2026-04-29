@@ -413,9 +413,9 @@ export default function SplittingScreen({ navigation, route }: any) {
                                                                         shadowOpacity: 0.05, 
                                                                         shadowRadius: 3 
                                                                     }}>
-                                                                        <Text style={{ fontWeight: '700', fontSize: 11, color: colors.primary, transform: [{ translateY: 1.0 }] }}>{u?.initials}</Text>
+                                                                        <Text style={{ fontWeight: '700', fontSize: 11, color: colors.primary }}>{u?.initials}</Text>
                                                                         {count > 1 && (
-                                                                            <View style={{ position: 'absolute', top: -4, right: -4, backgroundColor: '#1c1c19', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#f6f3ee' }}>
+                                                                            <View style={{ position: 'absolute', top: -4, right: -4, backgroundColor: isDark ? colors.onSurface : '#1c1c19', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: colors.background }}>
                                                                                 <Text style={{ color: 'white', fontSize: 7, fontWeight: 'bold' }}>{count}</Text>
                                                                             </View>
                                                                         )}
@@ -601,12 +601,12 @@ export default function SplittingScreen({ navigation, route }: any) {
                                                                     }}>
                                                                         <Text style={{ fontWeight: '700', fontSize: 16, color: colors.primary, textAlign: 'center' }}>{user.initials}</Text>
                                                                         {shares > 1 && (
-                                                                            <View style={{ position: 'absolute', top: -4, right: -4, backgroundColor: '#1c1c19', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#fcf9f4' }}>
+                                                                            <View style={{ position: 'absolute', top: -4, right: -4, backgroundColor: isDark ? colors.onSurface : '#1c1c19', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: colors.background }}>
                                                                                 <Text style={{ color: 'white', fontSize: 7, fontWeight: 'bold' }}>{shares}</Text>
                                                                             </View>
                                                                         )}
                                                                         {shares === 1 && (
-                                                                            <View style={{ position: 'absolute', top: -2, right: -2, backgroundColor: '#85341f', borderRadius: 8, width: 16, height: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#fcf9f4' }}>
+                                                                            <View style={{ position: 'absolute', top: -2, right: -2, backgroundColor: '#85341f', borderRadius: 8, width: 16, height: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: colors.background }}>
                                                                                 <Check size={8} color="white" />
                                                                             </View>
                                                                         )}
