@@ -21,9 +21,6 @@ const NEWSREADER_BOLD = 'Newsreader_700Bold';
 const NEWSREADER_ITALIC_BOLD = 'Newsreader_700Bold_Italic';
 const NEWSREADER_REGULAR = 'Newsreader_400Regular';
 
-const APP_STORE_LINK = "apps.apple.com/app/id6761743135"; // Shortened for SMS
-const MARKETING_FOOTER = `\n\nSplit using FamilyStyle: https://${APP_STORE_LINK}`;
-
 // High-end distinct palette helper
 const getUserColor = (userId: string) => {
     if (userId === 'me') return { bg: '#ffffff', border: '#85341f' };
@@ -137,8 +134,6 @@ export default function ResultScreen({ navigation, route }: any) {
             summary += `\nPay via Venmo (@${cleanUsername}): ${buildVenmoUrl(venmoUsername)}`;
         }
         
-        summary += MARKETING_FOOTER;
-        
         return summary;
     };
 
@@ -167,11 +162,8 @@ export default function ResultScreen({ navigation, route }: any) {
             
             if (venmoUsername.trim()) {
                 const cleanUsername = venmoUsername.trim().replace('@', '');
-                const brandedNote = `${note} - via FamilyStyle`;
-                message += ` You can venmo me (@${cleanUsername}) here: ${buildVenmoUrl(venmoUsername, amount, brandedNote)}`;
+                message += ` You can venmo me (@${cleanUsername}) here: ${buildVenmoUrl(venmoUsername, amount, note)}`;
             }
-            
-            // Removed MARKETING_FOOTER from individual requests to preserve Venmo Link Preview
             
             await SMS.sendSMSAsync(recipients, message);
             setSentUsers(prev => ({ ...prev, [user.id]: true }));
@@ -204,11 +196,8 @@ export default function ResultScreen({ navigation, route }: any) {
             
             if (venmoUsername.trim()) {
                 const cleanUsername = venmoUsername.trim().replace('@', '');
-                const brandedNote = `${note} - via FamilyStyle`;
-                message += `\nYou can venmo me (@${cleanUsername}) here: ${buildVenmoUrl(venmoUsername, totals.total, brandedNote)}`;
+                message += `\nYou can venmo me (@${cleanUsername}) here: ${buildVenmoUrl(venmoUsername, totals.total, note)}`;
             }
-            
-            // Removed MARKETING_FOOTER from individual requests to preserve Venmo Link Preview
             
             await SMS.sendSMSAsync(recipients, message);
             setSentUsers(prev => ({ ...prev, [user.id]: true }));
