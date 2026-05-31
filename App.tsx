@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts, Newsreader_400Regular, Newsreader_700Bold, Newsreader_700Bold_Italic, Newsreader_800ExtraBold, Newsreader_800ExtraBold_Italic } from '@expo-google-fonts/newsreader';
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
+import * as Updates from 'expo-updates';
 
 import HomeScreen from './src/screens/HomeScreen';
 import CameraScreen from './src/screens/CameraScreen';
@@ -36,6 +37,22 @@ export default function App() {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded, fontError]);
+
+  useEffect(() => {
+    async function checkAndApplyUpdate() {
+      if (__DEV__) return;
+      try {
+        const update = await Updates.checkForUpdateAsync();
+        if (update.isAvailable) {
+          await Updates.fetchUpdateAsync();
+          await Updates.reloadAsync();
+        }
+      } catch (error) {
+        console.warn("Failed to check for updates:", error);
+      }
+    }
+    checkAndApplyUpdate();
+  }, []);
 
   if (!fontsLoaded && !fontError) {
     return null;

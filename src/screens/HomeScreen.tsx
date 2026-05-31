@@ -1,8 +1,8 @@
 import React from "react";
-import { View, Text, TouchableOpacity, Image, Dimensions, StyleSheet } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { View, Text, TouchableOpacity, Image, Dimensions, StyleSheet, ScrollView } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import { Camera, Upload, Moon, Sun, History } from "lucide-react-native";
+import { Camera, Upload, History } from "lucide-react-native";
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -11,7 +11,8 @@ import { OutlinedText } from '../components/OutlinedText';
 const { width } = Dimensions.get('window');
 
 export default function HomeScreen({ navigation }: any) {
-    const { colors, toggleTheme, isDark } = useTheme();
+    const { colors, isDark } = useTheme();
+    const insets = useSafeAreaInsets();
 
     const pickImage = async () => {
         let result = await ImagePicker.launchImageLibraryAsync({
@@ -29,8 +30,15 @@ export default function HomeScreen({ navigation }: any) {
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             <StatusBar style={isDark ? 'light' : 'dark'} />
 
-            <ScrollView contentContainerStyle={{ flexGrow: 1, paddingBottom: 60 }} showsVerticalScrollIndicator={false} style={styles.content}>
-                {/* Centered Logo & Theme Toggle */}
+        <ScrollView 
+            style={{ flex: 1, backgroundColor: colors.background }}
+            contentContainerStyle={{ flexGrow: 1 }}
+            bounces={false}
+            alwaysBounceVertical={false}
+            showsVerticalScrollIndicator={false}
+        >
+            <View style={{ flex: 1, width: '100%', alignItems: 'center', paddingBottom: Math.max(insets.bottom, 20) + 20 }}>
+                {/* Centered Logo */}
                 <SafeAreaView edges={['top']} style={styles.header}>
                     <View style={styles.headerLeftContainer}>
                         <TouchableOpacity
@@ -54,26 +62,12 @@ export default function HomeScreen({ navigation }: any) {
                             {"FamilyStyle "}
                         </OutlinedText>
                     </View>
-                    <View style={styles.toggleContainer}>
-                        <TouchableOpacity
-                            onPress={toggleTheme}
-                            style={[styles.toggleButton, {
-                                backgroundColor: colors.surfaceContainerLow,
-                                borderColor: colors.outlineVariant + '4D',
-                            }]}
-                        >
-                            {isDark ? (
-                                <Sun size={20} color={colors.onSurfaceVariant} />
-                            ) : (
-                                <Moon size={20} color={colors.primary} />
-                            )}
-                        </TouchableOpacity>
-                    </View>
+                    <View style={styles.toggleContainer} />
                 </SafeAreaView>
 
                 {/* Hero Section: Full Width Fade */}
                 <View style={styles.heroWrapper}>
-                    <View style={{ width: width, height: width * 1.05 }}>
+                    <View style={{ width: width, height: width * 0.85 }}>
                         <Image
                             source={require('../../assets/dining-hero.jpg')}
                             style={styles.heroImage}
@@ -122,6 +116,7 @@ export default function HomeScreen({ navigation }: any) {
                 </View>
 
                 {/* Primary Actions */}
+                <View style={{ flex: 1 }} />
                 <View style={styles.actionsContainer}>
                     <TouchableOpacity
                         style={[styles.primaryButton, { backgroundColor: colors.primary }]}
@@ -157,9 +152,10 @@ export default function HomeScreen({ navigation }: any) {
                         <View style={[styles.brandingLine, { backgroundColor: colors.onSurface + '33' }]} />
                     </View>
                 </View>
-            </ScrollView>
-        </View>
-    );
+            </View>
+        </ScrollView>
+    </View>
+);
 }
 
 const styles = StyleSheet.create({
@@ -208,7 +204,7 @@ const styles = StyleSheet.create({
     heroWrapper: {
         position: 'relative',
         width: '100%',
-        marginTop: -48,
+        marginTop: -12,
         overflow: 'hidden',
     },
     heroImage: {
@@ -227,7 +223,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 40,
         zIndex: 10,
         alignItems: 'center',
-        marginTop: -8,
+        marginTop: 4,
     },
     headlineText: {
         fontFamily: 'Newsreader_700Bold',
@@ -251,7 +247,6 @@ const styles = StyleSheet.create({
     actionsContainer: {
         width: '100%',
         paddingHorizontal: 32,
-        marginTop: 'auto',
         paddingBottom: 32,
         gap: 16,
     },

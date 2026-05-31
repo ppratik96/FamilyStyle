@@ -18,7 +18,6 @@ export const processBillWithGemini = onRequest(
         return;
       }
 
-      // Read key from environment variable
       const apiKey = process.env.GEMINI_API_KEY || process.env.EXPO_PUBLIC_GEMINI_API_KEY;
 
       if (!apiKey) {
@@ -27,81 +26,62 @@ export const processBillWithGemini = onRequest(
         return;
       }
 
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-
-      const requestBody = {
-        contents: [
-          {
+      // Helper to call a specific model
+      const callModel = async (modelId: string) => {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`;
+        const requestBody = {
+          contents: [{
             parts: [
+              { text: `Analyze this image and extract all bill details with 100% accuracy.
+              Return your response as a STRICTLY valid JSON object (no markdown, no preamble).
+              The JSON must follow this exact structure:
               {
-                text: `Analyze this image and extract all bill details with 100% accuracy.
-                
-                Return your response as a STRICTLY valid JSON object (no markdown, no preamble).
-                The JSON must follow this exact structure:
-                {
-                  "items": [
-                    {
-                      "id": "A unique string",
-                      "name": "Item name (include quantity at start if > 1, e.g. '2 Saganaki')",
-                      "price": total_line_price_as_number
-                    }
-                  ],
-                  "tax": total_tax_number,
-                  "serviceCharge": total_service_fee_number,
-                  "tip": tip_amount_number,
-                  "discount": total_discount_amount_as_positive_number_or_zero,
-                  "subtotal": the_subtotal_before_tax_and_discounts,
-                  "restaurantName": "The name of the restaurant or merchant"
-                }
-                
-                IMPORTANT: 
-                1. Do not use currency symbols.
-                2. Do not include 'Total' or 'Subtotal' in the items array.
-                3. Return ONLY the JSON object.
-                4. Exclude discounts from the items array. They should ONLY be in the discount field.`,
-              },
-              {
-                inlineData: {
-                  mimeType: "image/jpeg",
-                  data: base64Image,
-                },
-              },
+                "items": [{"id": "string", "name": "string", "price": number}],
+                "tax": number,
+                "serviceCharge": number,
+                "tip": number,
+                "discount": number,
+                "subtotal": number,
+                "restaurantName": "string"
+              }` },
+              { inlineData: { mimeType: "image/jpeg", data: base64Image } },
             ],
-          },
-        ],
-        generationConfig: {
-          responseMimeType: "application/json",
-        },
+          }],
+          generationConfig: { responseMimeType: "application/json" },
+        };
+
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(requestBody),
+        });
+
+        if (!response.ok) throw new Error(`Model ${modelId} failed: ${await response.text()}`);
+        const data = await response.json();
+        return JSON.parse(data.candidates[0].content.parts[0].text);
       };
 
-      const response = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestBody),
-      });
+      let result;
+      let usedModel = "gemini-3.1-flash-lite-preview";
 
-      if (!response.ok) {
-        const errText = await response.text();
-        logger.error(`Gemini API Error (${response.status}):`, errText);
-        res.status(response.status).send(`Gemini API error: ${errText}`);
-        return;
-      }
-
-      const data = await response.json();
-      const textResponse = data.candidates[0].content.parts[0].text;
-
-      let parsedData;
       try {
-        parsedData = JSON.parse(textResponse);
-      } catch (e) {
-        logger.error("Failed to parse JSON from Gemini:", textResponse);
-        res.status(500).send("Invalid response format from Gemini.");
-        return;
+        logger.info("Attempting extraction with Lite model...");
+        result = await callModel(usedModel);
+
+        // If Lite returned no items, it likely struggled with the image
+        if (!result.items || result.items.length === 0) {
+          throw new Error("Lite model returned 0 items. Falling back...");
+        }
+      } catch (err) {
+        logger.warn(`Lite model failed or returned empty: ${err}. Trying Flash...`);
+        usedModel = "gemini-3-flash-preview";
+        result = await callModel(usedModel);
       }
 
-      res.status(200).json(parsedData);
+      logger.info(`Successfully processed bill using ${usedModel}`);
+      res.status(200).json(result);
     } catch (error) {
-      logger.error("Error processing bill with Gemini:", error);
+      logger.error("All models failed to process bill:", error);
       res.status(500).send("Internal Server Error.");
     }
   }

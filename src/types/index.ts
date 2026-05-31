@@ -36,6 +36,7 @@ export interface HistoryItem {
         name: string;
         amount: number;
         wasRequested: boolean;
+        phoneNumber?: string;
     }[];
 }
 

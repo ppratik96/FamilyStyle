@@ -1,19 +1,103 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, SafeAreaView, Platform } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, Calendar, Utensils, Users, Receipt, CornerDownRight, Trash2 } from 'lucide-react-native';
-import { Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
+import { ArrowLeft, Calendar, Utensils, Users, Receipt, CornerDownRight, Trash2, Send, Check, MessageSquare, Share as ShareIcon } from 'lucide-react-native';
+import { Alert, Share } from 'react-native';
+import * as SMS from 'expo-sms';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { HistoryService } from '../services/historyService';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import { StatusBar } from 'expo-status-bar';
 import { useTheme } from '../ThemeContext';
-import { HistoryItem } from '../types';
+import { HistoryItem, User } from '../types';
 import { OutlinedText } from '../components/OutlinedText';
 
 export default function HistoryDetailScreen({ navigation, route }: any) {
     const { bill }: { bill: HistoryItem } = route.params;
     const insets = useSafeAreaInsets();
     const { colors, isDark } = useTheme();
+
+    const [sentUsers, setSentUsers] = React.useState<Record<string, boolean>>({});
+    const [venmoUsername, setVenmoUsername] = React.useState('');
+    const [sharingMode, setSharingMode] = React.useState<"individual" | "group">("individual");
+
+    React.useEffect(() => {
+        const loadSettings = async () => {
+            try {
+                const savedVenmo = await AsyncStorage.getItem('venmoUsername');
+                if (savedVenmo) setVenmoUsername(savedVenmo);
+            } catch (e) {}
+        };
+        loadSettings();
+    }, []);
+
+    const generateSummary = () => {
+        const note = bill.restaurantName ? `Dinner at ${bill.restaurantName}` : 'Bill Summary';
+        let summary = `🍽️ ${note}\n\n`;
+        bill.users.forEach((user) => {
+            if (user.id === 'me') return;
+            if (user.amount > 0) {
+                summary += `${user.name}: $${user.amount.toFixed(2)}\n`;
+            }
+        });
+
+        if (venmoUsername) {
+            const cleanUsername = venmoUsername.trim().replace('@', '');
+            summary += `\nPay via Venmo (@${cleanUsername}): https://venmo.com/?txn=pay&recipients=${cleanUsername}`;
+        }
+        
+        summary += `\n\nSplit using https://TheFamilyStyle.app`;
+        return summary;
+    };
+
+    const shareViaSMS = async () => {
+        const isAvailable = await SMS.isAvailableAsync();
+        if (!isAvailable) {
+            Alert.alert("Error", "SMS is not available");
+            return;
+        }
+        const recipients = bill.users
+            .filter(u => u.id !== 'me' && u.phoneNumber && u.phoneNumber.trim().length > 0)
+            .map(u => u.phoneNumber as string);
+
+        await SMS.sendSMSAsync(recipients, generateSummary());
+    };
+
+    const shareViaSystem = async () => {
+        try {
+            await Share.share({
+                message: generateSummary(),
+            });
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    const sendRequest = async (userName: string, userId: string, amount: number, phoneNumber?: string) => {
+        const isAvailable = await SMS.isAvailableAsync();
+        if (!isAvailable) {
+            Alert.alert("Error", "SMS is not available on this device");
+            return;
+        }
+
+        const note = bill.restaurantName ? `Dinner at ${bill.restaurantName}` : 'the bill';
+        let message = `Hey, your share of ${note} is $${amount.toFixed(2)}.`;
+        
+        if (venmoUsername) {
+            const cleanVenmo = venmoUsername.trim().replace('@', '');
+            const encodedNote = note ? encodeURIComponent(note.replace(/ /g, '\u00A0')) : '';
+            const venmoUrl = `https://venmo.com/?txn=pay&recipients=${cleanVenmo}&amount=${amount.toFixed(2)}${encodedNote ? `&note=${encodedNote}` : ''}`;
+            message += ` You can venmo me (@${cleanVenmo}) here: ${venmoUrl}`;
+        }
+
+        message += `\n\nSplit using https://TheFamilyStyle.app`;
+
+        const recipients = phoneNumber ? [phoneNumber] : [];
+        const { result } = await SMS.sendSMSAsync(recipients, message);
+        if (result === 'sent') {
+            setSentUsers(prev => ({ ...prev, [userId]: true }));
+        }
+    };
 
     const formatDate = (timestamp: number) => {
         return new Date(timestamp).toLocaleDateString('en-US', { 
@@ -71,7 +155,7 @@ export default function HistoryDetailScreen({ navigation, route }: any) {
                     </TouchableOpacity>
                     <View style={{ flex: 1, alignItems: 'center' }}>
                         <OutlinedText 
-                            style={{ fontFamily: 'Newsreader_700Bold_Italic', fontSize: 24, color: colors.primary }}
+                            style={{ fontFamily: 'Newsreader_700Bold_Italic', fontSize: 24, color: isDark ? 'white' : colors.primary }}
                             outlineColor="transparent"
                         >
                             Split Details
@@ -152,7 +236,7 @@ export default function HistoryDetailScreen({ navigation, route }: any) {
                                 <Text style={{ fontSize: 18, fontWeight: '700', color: colors.onSurface, fontFamily: 'Newsreader_700Bold' }}>Line Items</Text>
                             </View>
                             <View style={{ backgroundColor: colors.surface, borderRadius: 24, padding: 20, borderWidth: 1, borderColor: colors.outlineVariant + '33' }}>
-                                {bill.items.filter(i => !i.parentId).map((item, index) => (
+                                {bill && bill.items && bill.items.length > 0 && (bill.items as any[]).filter(i => !i.parentId).map((item, index) => (
                                     <View key={item.id} style={{ marginBottom: index === (bill.items?.length || 0) - 1 ? 0 : 16 }}>
                                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
                                             <Text style={{ fontSize: 15, fontWeight: '600', color: colors.onSurface, flex: 1 }}>{item.name}</Text>
@@ -175,52 +259,230 @@ export default function HistoryDetailScreen({ navigation, route }: any) {
                     <View>
                         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
                             <Users size={18} color={colors.primary} style={{ marginRight: 8 }} />
-                            <Text style={{ fontSize: 18, fontWeight: '700', color: colors.onSurface, fontFamily: 'Newsreader_700Bold' }}>Who Paid What</Text>
+                            <Text style={{ fontSize: 18, fontWeight: '700', color: colors.onSurface, fontFamily: 'Newsreader_700Bold' }}>Sharing</Text>
                         </View>
-                        <View style={{ gap: 12 }}>
-                            {bill.users.map((user) => {
-                                const userColor = getUserColor(user.id);
-                                return (
-                                    <View 
-                                        key={user.id}
-                                        style={{ 
-                                            flexDirection: 'row', 
-                                            alignItems: 'center', 
-                                            backgroundColor: colors.surface, 
-                                            padding: 16, 
+
+                        {/* Sharing Mode Toggle */}
+                        <View style={{ 
+                            flexDirection: 'row', 
+                            backgroundColor: isDark ? '#2b2220' : '#f6f3ee', 
+                            padding: 6, 
+                            borderRadius: 16, 
+                            marginBottom: 24, 
+                            borderWidth: 1, 
+                            borderColor: colors.outlineVariant + '33' 
+                        }}>
+                            <TouchableOpacity 
+                                onPress={() => setSharingMode('individual')}
+                                activeOpacity={0.8}
+                                style={{
+                                    flex: 1,
+                                    paddingVertical: 12,
+                                    borderRadius: 12,
+                                    alignItems: 'center',
+                                    flexDirection: 'row',
+                                    justifyContent: 'center',
+                                    backgroundColor: sharingMode === 'individual' ? colors.primary : 'transparent',
+                                    ...(sharingMode === 'individual' ? {
+                                        shadowColor: '#85341f',
+                                        shadowOffset: { width: 0, height: 2 },
+                                        shadowOpacity: 0.3,
+                                        shadowRadius: 4,
+                                        elevation: 4
+                                    } : {})
+                                }}
+                            >
+                                <Send size={14} color={sharingMode === 'individual' ? 'white' : (isDark ? 'white' : colors.primary)} style={{ opacity: sharingMode === 'individual' ? 1 : 0.6 }} />
+                                <Text style={{ 
+                                    fontFamily: 'Newsreader_700Bold', 
+                                    marginLeft: 8, 
+                                    fontSize: 14,
+                                    color: sharingMode === 'individual' ? 'white' : (isDark ? 'white' : colors.primary),
+                                    opacity: sharingMode === 'individual' ? 1 : (isDark ? 0.6 : 1)
+                                }}>Individual</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity 
+                                onPress={() => setSharingMode('group')}
+                                activeOpacity={0.8}
+                                style={{
+                                    flex: 1,
+                                    paddingVertical: 12,
+                                    borderRadius: 12,
+                                    alignItems: 'center',
+                                    flexDirection: 'row',
+                                    justifyContent: 'center',
+                                    backgroundColor: sharingMode === 'group' ? colors.primary : 'transparent',
+                                    ...(sharingMode === 'group' ? {
+                                        shadowColor: '#85341f',
+                                        shadowOffset: { width: 0, height: 2 },
+                                        shadowOpacity: 0.3,
+                                        shadowRadius: 4,
+                                        elevation: 4
+                                    } : {})
+                                }}
+                            >
+                                <MessageSquare size={14} color={sharingMode === 'group' ? 'white' : (isDark ? 'white' : colors.primary)} style={{ opacity: sharingMode === 'group' ? 1 : 0.6 }} />
+                                <Text style={{ 
+                                    fontFamily: 'Newsreader_700Bold', 
+                                    marginLeft: 8, 
+                                    fontSize: 14,
+                                    color: sharingMode === 'group' ? 'white' : (isDark ? 'white' : colors.primary),
+                                    opacity: sharingMode === 'group' ? 1 : (isDark ? 0.6 : 1)
+                                }}>Group Chat</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        {sharingMode === 'group' ? (
+                            <Animated.View entering={FadeIn}>
+                                <View style={{ flexDirection: 'row', gap: 12, marginBottom: 24 }}>
+                                    <TouchableOpacity
+                                        onPress={shareViaSMS}
+                                        style={{
+                                            flex: 1,
+                                            backgroundColor: colors.primary,
+                                            paddingVertical: 16,
                                             borderRadius: 20,
-                                            borderWidth: 1,
-                                            borderColor: colors.outlineVariant + '33'
-                                        }}
-                                    >
-                                        <View style={{ 
-                                            width: 40, 
-                                            height: 40, 
-                                            borderRadius: 20, 
-                                            backgroundColor: userColor.bg, 
-                                            borderWidth: 1, 
-                                            borderColor: userColor.border,
+                                            flexDirection: 'row',
                                             alignItems: 'center',
                                             justifyContent: 'center',
-                                            marginRight: 16
-                                        }}>
-                                            <Text style={{ fontWeight: '700', color: user.id === 'me' ? colors.primary : colors.onSurface }}>
-                                                {user.name.charAt(0).toUpperCase()}
-                                            </Text>
-                                        </View>
-                                        <View style={{ flex: 1 }}>
-                                            <Text style={{ fontWeight: '700', color: colors.onSurface }}>{user.id === 'me' ? 'You' : user.name}</Text>
-                                            <Text style={{ fontSize: 12, color: colors.onSurfaceVariant, opacity: 0.6 }}>
-                                                {user.wasRequested ? 'Requested via SMS' : (user.id === 'me' ? 'Your contribution' : 'Paid in full')}
-                                            </Text>
-                                        </View>
-                                        <Text style={{ fontSize: 18, fontWeight: '700', color: colors.onSurface }}>
-                                            ${user.amount.toFixed(2)}
+                                            shadowColor: '#85341f',
+                                            shadowOffset: { width: 0, height: 4 },
+                                            shadowOpacity: 0.3,
+                                            shadowRadius: 8,
+                                            elevation: 6,
+                                        }}
+                                        activeOpacity={0.9}
+                                    >
+                                        <MessageSquare size={18} color="white" />
+                                        <Text style={{ color: 'white', fontWeight: '800', marginLeft: 8 }}>Text Group</Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                        onPress={shareViaSystem}
+                                        style={{
+                                            flex: 1,
+                                            paddingVertical: 16,
+                                            borderRadius: 20,
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            borderWidth: 2,
+                                            borderColor: colors.primary + '40',
+                                            backgroundColor: isDark ? colors.outlineVariant + '33' : 'transparent',
+                                        }}
+                                        activeOpacity={0.7}
+                                    >
+                                        <ShareIcon size={18} color={isDark ? 'white' : colors.primary} />
+                                        <Text style={{ color: isDark ? 'white' : colors.primary, fontWeight: '800', marginLeft: 8 }}>Share Totals</Text>
+                                    </TouchableOpacity>
+                                </View>
+
+                                {/* Group Summary Preview */}
+                                <View style={{ backgroundColor: colors.surface, borderRadius: 24, padding: 24, borderWidth: 1, borderColor: colors.outlineVariant + '33' }}>
+                                    <Text style={{ color: colors.primary, fontWeight: '800', fontSize: 14, marginBottom: 16, opacity: 0.8, letterSpacing: 1 }}>FINAL TALLY</Text>
+                                    {bill.users.filter(u => u.id !== 'me').map((user) => {
+                                        if (user.amount === 0) return null;
+                                        return (
+                                            <View key={user.id} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                                                <Text style={{ color: colors.onSurface, fontSize: 16, fontWeight: '600' }}>{user.name}</Text>
+                                                <Text style={{ color: colors.onSurface, fontSize: 16, fontWeight: '800' }}>${user.amount.toFixed(2)}</Text>
+                                            </View>
+                                        );
+                                    })}
+                                    <View style={{ height: 1, backgroundColor: colors.outlineVariant + '33', marginVertical: 12 }} />
+                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <Text style={{ color: colors.primary, fontSize: 18, fontWeight: '800' }}>Group Total</Text>
+                                        <Text style={{ color: colors.primary, fontSize: 18, fontWeight: '800' }}>
+                                            ${bill.users.filter(u => u.id !== 'me').reduce((acc, u) => acc + u.amount, 0).toFixed(2)}
                                         </Text>
                                     </View>
-                                );
-                            })}
-                        </View>
+                                </View>
+                            </Animated.View>
+                        ) : (
+                            <View style={{ gap: 12 }}>
+                                {bill.users.map((user) => {
+                                    const userColor = getUserColor(user.id);
+                                    return (
+                                        <View 
+                                            key={user.id}
+                                            style={{ 
+                                                flexDirection: 'row', 
+                                                alignItems: 'center', 
+                                                backgroundColor: colors.surface, 
+                                                padding: 16, 
+                                                borderRadius: 20,
+                                                borderWidth: 1,
+                                                borderColor: colors.outlineVariant + '33'
+                                            }}
+                                        >
+                                            <View style={{ 
+                                                width: 40, 
+                                                height: 40, 
+                                                borderRadius: 20, 
+                                                backgroundColor: userColor.bg, 
+                                                borderWidth: 1, 
+                                                borderColor: userColor.border,
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                marginRight: 16
+                                            }}>
+                                                <Text style={{ fontWeight: '700', color: colors.primary }}>
+                                                    {user.name.charAt(0).toUpperCase()}
+                                                </Text>
+                                            </View>
+                                            <View style={{ flex: 1 }}>
+                                                <Text style={{ fontWeight: '700', color: colors.onSurface }}>{user.id === 'me' ? 'You' : user.name}</Text>
+                                                <Text style={{ fontSize: 12, color: colors.onSurfaceVariant, opacity: 0.6 }}>
+                                                    {user.id === 'me' ? 'Your contribution' : (user.wasRequested || sentUsers[user.id] ? 'Requested via SMS' : 'Awaiting request')}
+                                                </Text>
+                                            </View>
+                                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                                <Text style={{ fontSize: 18, fontWeight: '700', color: colors.onSurface, marginRight: user.id === 'me' ? 0 : 12 }}>
+                                                    ${user.amount.toFixed(2)}
+                                                </Text>
+                                                
+                                                {user.id !== 'me' && (
+                                                    <TouchableOpacity
+                                                        onPress={() => sendRequest(user.name, user.id, user.amount, user.phoneNumber)}
+                                                        style={{
+                                                            minWidth: 64,
+                                                            paddingVertical: 8,
+                                                            paddingHorizontal: 12,
+                                                            borderRadius: 12,
+                                                            borderWidth: 1,
+                                                            backgroundColor: sentUsers[user.id] ? colors.success + '1A' : colors.primary + '1A',
+                                                            borderColor: sentUsers[user.id] ? colors.success + '33' : colors.primary + '33',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                        }}
+                                                        activeOpacity={0.8}
+                                                    >
+                                                        {sentUsers[user.id] ? (
+                                                            <Send size={14} color={isDark ? colors.success : '#15803d'} />
+                                                        ) : (
+                                                            <Send size={14} color={isDark ? 'white' : colors.primary} />
+                                                        )}
+                                                        <Text 
+                                                            style={{ 
+                                                                fontSize: 8, 
+                                                                fontWeight: '800',
+                                                                marginTop: 2,
+                                                                color: sentUsers[user.id] 
+                                                                    ? (isDark ? colors.success : '#15803d') 
+                                                                    : (isDark ? 'white' : colors.primary),
+                                                                letterSpacing: 0.5
+                                                            }}
+                                                        >
+                                                            {(sentUsers[user.id] || user.wasRequested) ? 'RESEND' : 'REQUEST'}
+                                                        </Text>
+                                                    </TouchableOpacity>
+                                                )}
+                                            </View>
+                                        </View>
+                                    );
+                                })}
+                            </View>
+                        )}
                     </View>
                 </Animated.View>
             </ScrollView>

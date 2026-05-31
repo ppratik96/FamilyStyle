@@ -11,14 +11,22 @@ export const getContacts = async (): Promise<User[]> => {
         });
 
         if (data.length > 0) {
+            const frequencies = await getContactFrequencies();
+            
             return data
-                .filter(contact => contact.phoneNumbers && contact.phoneNumbers.length > 0) // Only contacts with phone numbers
+                .filter(contact => contact.phoneNumbers && contact.phoneNumbers.length > 0)
                 .map(contact => ({
                     id: contact.id || Math.random().toString(),
                     name: contact.name || 'Unknown',
-                    phoneNumber: contact.phoneNumbers ? contact.phoneNumbers[0].number : '',
+                    phoneNumber: contact.phoneNumbers ? (contact.phoneNumbers[0].number || '') : '',
                     initials: getInitials(contact.name || ''),
-                }));
+                }))
+                .sort((a, b) => {
+                    const freqA = frequencies[a.id] || 0;
+                    const freqB = frequencies[b.id] || 0;
+                    if (freqA !== freqB) return freqB - freqA; // Sort by frequency descending
+                    return a.name.localeCompare(b.name); // Then alphabetically
+                });
         }
     }
     return [];

@@ -2,13 +2,13 @@
   "expo": {
     "name": "FamilyStyle",
     "slug": "FamilyStyle",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/clean-splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -17,16 +17,19 @@
       "bundleIdentifier": "com.pratikpatel.familystyle",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
+      },
+      "splash": {
+        "dark": {
+          "image": "./assets/clean-splash-dark.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#1c1514"
+        }
       }
     },
     "android": {
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "permissions": [
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO",
-        "android.permission.READ_CONTACTS",
-        "android.permission.WRITE_CONTACTS",
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO",
         "android.permission.READ_CONTACTS",
@@ -67,7 +70,8 @@
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/c634ba78-a220-4036-9761-c24796c0b0ea"
+      "url": "https://u.expo.dev/c634ba78-a220-4036-9761-c24796c0b0ea",
+      "enabled": true
     }
   }
 }

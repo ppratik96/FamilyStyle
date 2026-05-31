@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Modal, FlatList, TextInput, ActivityIndicator, Platform, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, Plus, X, Users, Check, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { ArrowLeft, Plus, X, Users, Check, ChevronDown, ChevronUp, Info } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
@@ -223,9 +223,36 @@ export default function SplittingScreen({ navigation, route }: any) {
                         </View>
 
                         {/* Instructional Sub-header */}
-                        <View style={{ marginTop: 24, marginBottom: 12, alignItems: 'center', paddingHorizontal: 24 }}>
-                            <Text style={{ fontSize: 9, color: colors.muted, letterSpacing: 1.2, fontWeight: '600', textAlign: 'center' }}>
-                                TAP AVATAR TO COVER GUESTS (+1). HOLD TO REMOVE (−1).
+                        <View style={{ 
+                            marginHorizontal: 24, 
+                            marginTop: 16,
+                            marginBottom: 12, 
+                            padding: 12, 
+                            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : colors.primary + '14', 
+                            borderRadius: 16, 
+                            borderWidth: 1, 
+                            borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : colors.primary + '2b', 
+                            flexDirection: 'row', 
+                            alignItems: 'center', 
+                            gap: 12 
+                        }}>
+                            <View style={{
+                                width: 22,
+                                height: 22,
+                                borderRadius: 11,
+                                backgroundColor: isDark ? '#ffffff' : colors.primary,
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                            }}>
+                                <Text style={{ 
+                                    color: isDark ? colors.background : '#ffffff', 
+                                    fontSize: 12, 
+                                    fontWeight: '800',
+                                    lineHeight: Platform.OS === 'ios' ? 14 : 16
+                                }}>1</Text>
+                            </View>
+                            <Text style={{ fontSize: 13, color: isDark ? 'white' : colors.primary, fontWeight: '600', flex: 1 }}>
+                                Add your dining mates from your contacts.
                             </Text>
                         </View>
 
@@ -344,6 +371,39 @@ export default function SplittingScreen({ navigation, route }: any) {
                         </View>
                         {/* Item List */}
                         <View style={{ flex: 1 }}>
+                            {items.every(item => item.assignedTo.length === 0) && (
+                                <View style={{ 
+                                    marginHorizontal: 20, 
+                                    marginBottom: 12, 
+                                    padding: 12, 
+                                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : colors.primary + '14', 
+                                    borderRadius: 16, 
+                                    borderWidth: 1, 
+                                    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : colors.primary + '2b', 
+                                    flexDirection: 'row', 
+                                    alignItems: 'center', 
+                                    gap: 12
+                                }}>
+                                    <View style={{
+                                        width: 22,
+                                        height: 22,
+                                        borderRadius: 11,
+                                        backgroundColor: isDark ? '#ffffff' : colors.primary,
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                    }}>
+                                        <Text style={{ 
+                                            color: isDark ? colors.background : '#ffffff', 
+                                            fontSize: 12, 
+                                            fontWeight: '800',
+                                            lineHeight: Platform.OS === 'ios' ? 14 : 16
+                                        }}>2</Text>
+                                    </View>
+                                    <Text style={{ fontSize: 13, color: isDark ? 'white' : colors.primary, fontWeight: '600', flex: 1 }}>
+                                        Tap any dish below to start assigning who ate what.
+                                    </Text>
+                                </View>
+                            )}
                             <FlatList
                                 data={items}
                                 keyExtractor={(item) => item.id}
@@ -378,8 +438,8 @@ export default function SplittingScreen({ navigation, route }: any) {
                                                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                                                     <View style={{ flex: 1, paddingRight: 20 }}>
                                                         <Text style={{ fontWeight: '700', fontSize: 16, color: colors.onSurface, letterSpacing: -0.2, lineHeight: 22 }}>{item.name}</Text>
-                                                        <Text style={{ fontStyle: 'italic', fontSize: 13, color: isDark ? colors.muted : colors.primary, opacity: isDark ? 1 : 0.5, marginTop: 4 }}>
-                                                            {isSplit ? `Split with ${item.assignedTo.length} ${item.assignedTo.length === 1 ? 'person' : 'people'}` : 'Unassigned'}
+                                                        <Text style={{ fontStyle: 'italic', fontSize: 13, color: isDark ? colors.muted : colors.primary, opacity: isDark ? 1 : 0.7, marginTop: 4, fontWeight: isSplit ? '400' : '600' }}>
+                                                            {isSplit ? `Split with ${item.assignedTo.length} ${item.assignedTo.length === 1 ? 'person' : 'people'}` : 'Tap to split ➜'}
                                                         </Text>
                                                     </View>
                                                     <View className="flex-row items-baseline">

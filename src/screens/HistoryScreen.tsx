@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, SafeAreaView, Platform, Dimensions } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, Text, ScrollView, TouchableOpacity, Platform, Dimensions, Alert } from 'react-native';
+import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, BarChart3, Users, Utensils, Calendar, ChevronRight, TrendingUp } from 'lucide-react-native';
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import { StatusBar } from 'expo-status-bar';
@@ -85,7 +85,7 @@ export default function HistoryScreen({ navigation }: any) {
                     </TouchableOpacity>
                     <View style={{ flex: 1, alignItems: 'center', marginRight: 40 }}>
                         <OutlinedText 
-                            style={{ fontFamily: 'Newsreader_700Bold_Italic', fontSize: 24, color: colors.primary }}
+                            style={{ fontFamily: 'Newsreader_700Bold_Italic', fontSize: 24, color: isDark ? 'white' : colors.primary }}
                             outlineColor="transparent"
                         >
                             History & Stats
