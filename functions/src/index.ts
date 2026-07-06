@@ -36,7 +36,7 @@ export const processBillWithGemini = onRequest(
               Return your response as a STRICTLY valid JSON object (no markdown, no preamble).
               The JSON must follow this exact structure:
               {
-                "items": [{"id": "string", "name": "string", "price": number}],
+                "items": [{"name": "string", "price": number}],
                 "tax": number,
                 "serviceCharge": number,
                 "tip": number,

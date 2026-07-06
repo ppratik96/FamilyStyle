@@ -43,8 +43,8 @@ const processWithGemini = async (imageUri: string, isRetry = false): Promise<{ i
         const parsedData = await response.json();
 
         return {
-            items: parsedData.items.map((item: any) => ({
-                id: item.id || Math.random().toString(36).substring(7),
+            items: parsedData.items.map((item: any, index: number) => ({
+                id: `item_${index}_${Math.random().toString(36).substring(7)}`,
                 name: item.name,
                 price: typeof item.price === 'number' ? item.price : parseFloat(item.price) || 0,
                 assignedTo: []
